@@ -194,6 +194,15 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
   background: var(--surface2); border: 1px solid var(--border); color: var(--text);
   padding: 5px 8px; border-radius: 3px; outline: none; }
 
+/* file attach button */
+.file-btn { background: none; border: none; cursor: pointer; font-size: 13px;
+  color: var(--muted); padding: 2px 4px; border-radius: 3px;
+  transition: color .15s; }
+.file-btn:hover { color: var(--blue-lt); }
+.file-count { display: inline-block; background: var(--green); color: #fff;
+  font-size: 9px; font-weight: 700; border-radius: 8px;
+  padding: 0 5px; line-height: 14px; vertical-align: middle; }
+
 /* ── VERACITY SYNC PANEL (right) ── */
 #sync-pane { background: var(--surface); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden; }
@@ -299,6 +308,15 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
       <div class="sync-body" id="sync-body">
         <div class="sync-empty">Select a package to see<br>Veracity field comparison</div>
       </div>
+
+      <!-- TRANSMITTAL PANEL -->
+      <div id="tx-panel" style="display:none;border-top:2px solid var(--border);padding:14px">
+        <div style="font-family:var(--font-head);font-size:11px;font-weight:600;
+                    letter-spacing:.1em;color:var(--muted);text-transform:uppercase;
+                    margin-bottom:10px">📄 TRANSMITTAL</div>
+        <div id="tx-status-row" style="margin-bottom:10px"></div>
+        <div id="tx-actions" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
     </div>
 
   </div>
@@ -369,6 +387,29 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
       <div style="flex:1"></div>
       <button class="btn" onclick="closeEditPackage()">Cancel</button>
       <button class="btn primary" onclick="submitEditPackage()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- FILE ATTACHMENT PANEL MODAL -->
+<div class="modal-overlay" id="file-panel-overlay" onclick="if(event.target===this)closeFilePanel()">
+  <div class="modal-box" style="max-width:520px">
+    <h3>Attached Files — <span id="fp-docnum" style="color:var(--blue-lt)"></span></h3>
+    <p style="color:var(--muted);font-size:12px;margin:0 0 14px">
+      Upload the document file(s) to include in the transmittal package.
+    </p>
+
+    <div id="fp-file-list" style="margin-bottom:14px;min-height:40px"></div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <input type="file" id="fp-file-input" multiple
+             style="flex:1;color:var(--fg);font-size:12px">
+      <button class="btn primary" onclick="uploadFiles()">↑ Upload</button>
+    </div>
+    <div id="fp-upload-status" style="font-size:12px;color:var(--muted);min-height:18px"></div>
+
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn" onclick="closeFilePanel()">Close</button>
     </div>
   </div>
 </div>
@@ -476,10 +517,12 @@ async function selectPackage(id) {
   try {
     const r = await fetch(`/api/packages/${id}`);
     _selectedPkg = await r.json();
+    await loadFileCounts(id);
     renderDetail();
     renderSync();
     // Load eligible docs for the add-doc dropdown (after renderDetail creates the input)
     await loadEligibleDocs(id);
+    await refreshTransmittalPanel(id);
   } catch(e) { console.error('selectPackage', e); }
 }
 
@@ -517,7 +560,11 @@ function renderDetail() {
               onclick="editCell(this,${pkg.id},'${esc(d.doc_number)}','est_reply_date')"
               style="font-size:11px">${esc(d.est_reply_date)||'<span style="color:var(--muted)">—</span>'}</td>
           <td><span class="sub-status ${stcls}">${esc(sub.Status||'—')}</span> ${na}</td>
-          <td>
+          <td style="white-space:nowrap">
+            <button class="file-btn" title="Attach / view files"
+              onclick="openFilePanel(${pkg.id},'${esc(d.doc_number)}')">
+              📎 ${_fileCounts[d.doc_number] ? `<span class="file-count">${_fileCounts[d.doc_number]}</span>` : ''}
+            </button>
             <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px"
               title="Remove from package"
               onclick="removeDoc(${pkg.id},'${esc(d.doc_number)}')">✕</button>
@@ -787,6 +834,205 @@ function editCell(td, pkgId, docNum, field) {
   };
   inp.addEventListener('blur', save);
   inp.addEventListener('keydown', e => { if (e.key==='Enter') inp.blur(); });
+}
+
+// ── File counts (populated on selectPackage) ──────────
+let _fileCounts = {};   // { doc_number: count }
+
+async function loadFileCounts(pkgId) {
+  try {
+    const r = await fetch(`/api/packages/${pkgId}/transmittal`);
+    if (r.ok) {
+      const d = await r.json();
+      _fileCounts = d.file_counts || {};
+    }
+  } catch { _fileCounts = {}; }
+}
+
+// ── File panel modal ──────────────────────────────────
+let _fpPkgId   = null;
+let _fpDocNum  = null;
+
+async function openFilePanel(pkgId, docNum) {
+  _fpPkgId  = pkgId;
+  _fpDocNum = docNum;
+  document.getElementById('fp-docnum').textContent = docNum;
+  document.getElementById('fp-upload-status').textContent = '';
+  document.getElementById('fp-file-input').value = '';
+  document.getElementById('file-panel-overlay').style.display = 'flex';
+  await refreshFileList();
+}
+
+function closeFilePanel() {
+  document.getElementById('file-panel-overlay').style.display = 'none';
+}
+
+async function refreshFileList() {
+  const list = document.getElementById('fp-file-list');
+  list.innerHTML = '<span style="color:var(--muted);font-size:12px">Loading…</span>';
+  try {
+    const r    = await fetch(`/api/packages/${_fpPkgId}/documents/${encodeURIComponent(_fpDocNum)}/files`);
+    const files = r.ok ? await r.json() : [];
+    if (!files.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">No files attached yet.</div>';
+      return;
+    }
+    list.innerHTML = files.map(f => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;
+                  border-bottom:1px solid var(--border);font-size:12px">
+        <span style="flex:1;font-family:var(--font-data)">📄 ${esc(f.filename)}</span>
+        <span style="color:var(--muted)">${fmtBytes(f.file_size)}</span>
+        <a href="/api/packages/${_fpPkgId}/files/${f.id}/download"
+           style="color:var(--blue-lt);text-decoration:none" title="Download">↓</a>
+        <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px"
+          title="Delete" onclick="deleteFile(${f.id})">✕</button>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = `<div style="color:var(--red);font-size:12px">Error: ${e.message}</div>`;
+  }
+}
+
+async function uploadFiles() {
+  const input  = document.getElementById('fp-file-input');
+  const status = document.getElementById('fp-upload-status');
+  if (!input.files.length) { status.textContent = 'Select a file first.'; return; }
+
+  status.textContent = 'Uploading…';
+  let ok = 0, fail = 0;
+  for (const file of input.files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const r = await fetch(
+        `/api/packages/${_fpPkgId}/documents/${encodeURIComponent(_fpDocNum)}/files`,
+        { method: 'POST', body: fd }
+      );
+      r.ok ? ok++ : fail++;
+    } catch { fail++; }
+  }
+  status.textContent = `${ok} uploaded${fail ? ', ' + fail + ' failed' : ''}.`;
+  input.value = '';
+  await refreshFileList();
+  // Refresh counts and transmittal panel
+  await loadFileCounts(_fpPkgId);
+  await refreshTransmittalPanel(_fpPkgId);
+  // Re-render doc table to update file count badges
+  if (_selectedPkg) renderDetail();
+}
+
+async function deleteFile(fileId) {
+  if (!confirm('Remove this file?')) return;
+  await fetch(`/api/packages/${_fpPkgId}/files/${fileId}`, { method: 'DELETE' });
+  await refreshFileList();
+  await loadFileCounts(_fpPkgId);
+  await refreshTransmittalPanel(_fpPkgId);
+  if (_selectedPkg) renderDetail();
+}
+
+function fmtBytes(b) {
+  if (!b) return '0 B';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+// ── Transmittal panel ─────────────────────────────────
+async function refreshTransmittalPanel(pkgId) {
+  const panel = document.getElementById('tx-panel');
+  if (!pkgId) { panel.style.display = 'none'; return; }
+
+  let data;
+  try {
+    const r = await fetch(`/api/packages/${pkgId}/transmittal`);
+    data = r.ok ? await r.json() : null;
+  } catch { data = null; }
+
+  panel.style.display = 'block';
+  const tx      = data?.transmittal;
+  const total   = data?.total_files || 0;
+  const statusRow = document.getElementById('tx-status-row');
+  const actions   = document.getElementById('tx-actions');
+
+  // Status badge colours
+  const statusColor = {
+    'Draft':            'var(--muted)',
+    'Pending Approval': 'var(--amber)',
+    'Approved':         'var(--green)',
+    'Rejected':         'var(--red)',
+    'Superseded':       'var(--muted)',
+  };
+
+  if (!tx) {
+    statusRow.innerHTML = `
+      <div style="font-size:11px;color:var(--muted)">
+        No transmittal generated yet.<br>
+        <span style="color:${total?'var(--green)':'var(--amber)'}">
+          ${total} file(s) attached
+        </span>
+      </div>`;
+    actions.innerHTML = `
+      <button class="btn primary" onclick="generateTransmittal(${pkgId})">
+        Generate Transmittal
+      </button>`;
+  } else {
+    const col = statusColor[tx.status] || 'var(--muted)';
+    statusRow.innerHTML = `
+      <div style="font-size:11px;margin-bottom:6px">
+        <span style="font-weight:700;color:${col}">${tx.status}</span>
+        <span style="color:var(--muted)"> · Rev ${tx.revision}</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted)">
+        Generated ${tx.generated_at?.slice(0,10)} by ${tx.generated_by || '—'}
+        ${tx.approved_at ? `<br>Approved ${tx.approved_at.slice(0,10)} by ${tx.approved_by}` : ''}
+        ${tx.reject_note ? `<br><span style="color:var(--red)">Rejected: ${tx.reject_note}</span>` : ''}
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">
+        ${total} file(s) attached across all docs
+      </div>`;
+
+    const btns = [
+      `<a class="btn" href="/api/packages/${pkgId}/transmittal/view" target="_blank">
+         👁 View Transmittal</a>`,
+    ];
+    if (tx.status !== 'Approved') {
+      btns.push(`<button class="btn amber"
+        onclick="sendForApproval(${pkgId})">✉ Send for PM Approval</button>`);
+    }
+    btns.push(`<button class="btn" onclick="generateTransmittal(${pkgId})">
+      ↺ Regenerate (new rev)</button>`);
+    if (tx.status === 'Approved') {
+      btns.push(`<a class="btn green"
+        href="/api/packages/${pkgId}/transmittal/download-zip">
+        ↓ Download ZIP for Veracity</a>`);
+    }
+    actions.innerHTML = btns.join('');
+  }
+}
+
+async function generateTransmittal(pkgId) {
+  const r = await fetch(`/api/packages/${pkgId}/transmittal/generate`,
+    { method: 'POST' });
+  if (!r.ok) { alert('Failed to generate transmittal'); return; }
+  await refreshTransmittalPanel(pkgId);
+}
+
+async function sendForApproval(pkgId) {
+  const r    = await fetch(`/api/packages/${pkgId}/transmittal/send-approval`,
+    { method: 'POST' });
+  const data = await r.json();
+
+  if (data.status === 'sent') {
+    alert(`Approval email sent to ${data.sent_to}`);
+  } else if (data.status === 'no_smtp') {
+    // Show both links so coordinator can share manually
+    const msg = `SMTP not configured — share these links manually with the PM:\n\n` +
+      `APPROVE:\n${data.approve_url}\n\nREJECT:\n${data.reject_url}`;
+    prompt('Copy the approval link below:', data.approve_url);
+  } else {
+    alert(data.error || 'Failed to send');
+    return;
+  }
+  await refreshTransmittalPanel(pkgId);
 }
 
 // ── Export ────────────────────────────────────────────

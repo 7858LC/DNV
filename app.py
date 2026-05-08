@@ -1464,6 +1464,367 @@ def api_package_import_veracity(pkg_id):
     })
 
 
+# ── Package file upload / download ───────────────────────────────────────────
+def _pkg_uploads_dir(pkg_id: int, doc_number: str) -> Path:
+    cfg = load_config()
+    p   = resolve_path(cfg.get("uploads_dir", "./uploads")) / "packages" / str(pkg_id) / doc_number
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+@app.route("/api/packages/<int:pkg_id>/documents/<path:doc_number>/files",
+           methods=["GET"])
+def api_pkg_files_list(pkg_id, doc_number):
+    from packages_db import get_files
+    db = _ensure_pkg_db()
+    return jsonify(get_files(db, pkg_id, doc_number))
+
+
+@app.route("/api/packages/<int:pkg_id>/documents/<path:doc_number>/files",
+           methods=["POST"])
+def api_pkg_file_upload(pkg_id, doc_number):
+    from packages_db import add_file, get_latest_transmittal, create_transmittal
+    import uuid, mimetypes
+
+    db = _ensure_pkg_db()
+    if "file" not in request.files:
+        return jsonify({"error": "No file"}), 400
+
+    f     = request.files["file"]
+    fname = secure_filename(f.filename)
+    if not fname:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    ext         = Path(fname).suffix
+    stored_name = f"{uuid.uuid4().hex}{ext}"
+    dest        = _pkg_uploads_dir(pkg_id, doc_number) / stored_name
+    f.save(str(dest))
+    size      = dest.stat().st_size
+    mime      = mimetypes.guess_type(fname)[0] or "application/octet-stream"
+    user      = _current_user()
+
+    fid = add_file(db, pkg_id, doc_number, fname, stored_name,
+                   file_size=size, mime_type=mime, uploaded_by=user)
+
+    # If a transmittal exists and is Approved, bump to new revision (edit detected)
+    tx = get_latest_transmittal(db, pkg_id)
+    if tx and tx["status"] == "Approved":
+        create_transmittal(db, pkg_id, generated_by=user)
+
+    return jsonify({"id": fid, "filename": fname, "file_size": size})
+
+
+@app.route("/api/packages/<int:pkg_id>/files/<int:file_id>/download",
+           methods=["GET"])
+def api_pkg_file_download(pkg_id, file_id):
+    from packages_db import get_file
+    db  = _ensure_pkg_db()
+    rec = get_file(db, file_id)
+    if not rec or rec["package_id"] != pkg_id:
+        abort(404)
+    fpath = (_pkg_uploads_dir(pkg_id, rec["doc_number"])
+             / rec["stored_name"])
+    if not fpath.exists():
+        abort(404)
+    return send_file(str(fpath), as_attachment=True,
+                     download_name=rec["filename"],
+                     mimetype=rec.get("mime_type") or "application/octet-stream")
+
+
+@app.route("/api/packages/<int:pkg_id>/files/<int:file_id>",
+           methods=["DELETE"])
+def api_pkg_file_delete(pkg_id, file_id):
+    from packages_db import delete_file, get_latest_transmittal, create_transmittal
+    db  = _ensure_pkg_db()
+    rec = delete_file(db, file_id, deleted_by=_current_user())
+    if not rec:
+        return jsonify({"error": "Not found"}), 404
+
+    # Remove physical file
+    fpath = (_pkg_uploads_dir(pkg_id, rec["doc_number"])
+             / rec["stored_name"])
+    try:
+        fpath.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+    # Bump transmittal if Approved
+    tx = get_latest_transmittal(db, pkg_id)
+    if tx and tx["status"] == "Approved":
+        create_transmittal(db, pkg_id, generated_by=_current_user())
+
+    return jsonify({"status": "ok"})
+
+
+# ── Transmittal routes ────────────────────────────────────────────────────────
+def _build_transmittal_context(db_path, pkg_id: int,
+                                submissions: list[dict]) -> dict:
+    """Assemble all data needed to render transmittal.html."""
+    from packages_db import (get_package, get_package_documents,
+                              get_latest_transmittal, get_transmittals,
+                              file_counts)
+    cfg     = load_config()
+    pkg     = get_package(db_path, pkg_id)
+    tx      = get_latest_transmittal(db_path, pkg_id)
+    all_tx  = get_transmittals(db_path, pkg_id)
+    docs    = get_package_documents(db_path, pkg_id)
+    counts  = file_counts(db_path, pkg_id)
+
+    sub_idx = {str(s.get("DocumentNumber", "")).strip(): s for s in submissions}
+
+    docs_out = []
+    for d in docs:
+        dn  = d["doc_number"]
+        sub = sub_idx.get(dn, {})
+        docs_out.append({
+            "doc_number":       dn,
+            "dnv_doc_number":   d.get("dnv_doc_number") or "",
+            "title":            sub.get("DocumentTitle", ""),
+            "type":             d.get("dnv_type") or sub.get("DocumentType", ""),
+            "revision":         sub.get("Revision", ""),
+            "est_reply_date":   d.get("est_reply_date") or "",
+            "dnv_not_applicable": bool(d.get("dnv_not_applicable", 0)),
+            "file_count":       counts.get(dn, 0),
+        })
+
+    return {
+        "pkg":           pkg,
+        "tx":            tx or {},
+        "all_revisions": all_tx,
+        "documents":     docs_out,
+        "company_name":  cfg.get("company_name", "Bastion"),
+        "project_name":  cfg.get("project_name", "Project"),
+    }
+
+
+@app.route("/api/packages/<int:pkg_id>/transmittal", methods=["GET"])
+def api_transmittal_status(pkg_id):
+    from packages_db import get_latest_transmittal, get_transmittals, file_counts
+    db     = _ensure_pkg_db()
+    tx     = get_latest_transmittal(db, pkg_id)
+    counts = file_counts(db, pkg_id)
+    return jsonify({
+        "transmittal":  tx,
+        "file_counts":  counts,
+        "total_files":  sum(counts.values()),
+    })
+
+
+@app.route("/api/packages/<int:pkg_id>/transmittal/generate", methods=["POST"])
+def api_transmittal_generate(pkg_id):
+    from packages_db import create_transmittal
+    db   = _ensure_pkg_db()
+    user = _current_user()
+    tx_id = create_transmittal(db, pkg_id, generated_by=user)
+    return jsonify({"status": "ok", "transmittal_id": tx_id})
+
+
+@app.route("/api/packages/<int:pkg_id>/transmittal/view", methods=["GET"])
+def api_transmittal_view(pkg_id):
+    db   = _ensure_pkg_db()
+    subs = _load_submissions_list()
+    ctx  = _build_transmittal_context(db, pkg_id, subs)
+    if not ctx.get("tx"):
+        return "No transmittal generated yet.", 404
+    return render_template("transmittal.html", **ctx)
+
+
+@app.route("/api/packages/<int:pkg_id>/transmittal/send-approval",
+           methods=["POST"])
+def api_transmittal_send_approval(pkg_id):
+    from packages_db import (get_latest_transmittal,
+                              send_transmittal_for_approval)
+    import secrets as _secrets
+    import smtplib, ssl
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import datetime as _dt2
+
+    db  = _ensure_pkg_db()
+    cfg = load_config()
+    tx  = get_latest_transmittal(db, pkg_id)
+
+    if not tx:
+        return jsonify({"error": "No transmittal to send"}), 400
+    if tx["status"] == "Approved":
+        return jsonify({"error": "Already approved"}), 400
+
+    pm_email = cfg.get("pm_email", "")
+    if not pm_email:
+        return jsonify({"error":
+            "pm_email not configured in config.json"}), 400
+
+    token   = _secrets.token_urlsafe(32)
+    hours   = int(cfg.get("approval_token_hours", 72))
+    expiry  = (_dt2.datetime.utcnow()
+                + _dt2.timedelta(hours=hours)
+               ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    site    = cfg.get("site_url", "http://localhost:5000").rstrip("/")
+    approve_url = f"{site}/api/transmittal/approve?token={token}&action=approve"
+    reject_url  = f"{site}/api/transmittal/approve?token={token}&action=reject"
+
+    subs    = _load_submissions_list()
+    ctx     = _build_transmittal_context(db, pkg_id, subs)
+    pkg     = ctx["pkg"]
+    doc_rows = "".join(
+        f"<tr><td>{d['doc_number']}</td><td>{d['title'] or '—'}</td>"
+        f"<td>{d['revision'] or '—'}</td>"
+        f"<td>{'✓ ' + str(d['file_count']) + ' file(s)' if d['file_count'] else '⚠ No file'}</td></tr>"
+        for d in ctx["documents"]
+    )
+
+    html_body = f"""
+<html><body style="font-family:Arial,sans-serif;font-size:11pt;color:#1a1a2e">
+<h2 style="color:#1a3a5c">Transmittal Approval Required</h2>
+<p>A document transmittal has been prepared and requires your approval.</p>
+<table style="border-collapse:collapse;margin:16px 0;font-size:10pt">
+  <tr><td style="padding:4px 12px 4px 0;color:#666">Package</td>
+      <td><strong>{pkg['name']}</strong></td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666">Transmittal No.</td>
+      <td>TX-{pkg_id:04d}-R{tx['revision']:02d}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666">Prepared by</td>
+      <td>{tx['generated_by']}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666">Documents</td>
+      <td>{len(ctx['documents'])}</td></tr>
+</table>
+<table style="border-collapse:collapse;font-size:9pt;width:100%;margin-bottom:20px">
+  <thead><tr style="background:#1a3a5c;color:#fff">
+    <th style="padding:6px 8px;text-align:left">Doc Number</th>
+    <th style="padding:6px 8px;text-align:left">Title</th>
+    <th style="padding:6px 8px;text-align:left">Rev</th>
+    <th style="padding:6px 8px;text-align:left">Files</th>
+  </tr></thead>
+  <tbody>{doc_rows}</tbody>
+</table>
+<p>Please review and take action:</p>
+<p>
+  <a href="{approve_url}" style="background:#15803d;color:#fff;padding:10px 24px;
+     text-decoration:none;border-radius:4px;font-weight:bold;margin-right:12px">
+    ✓ APPROVE</a>
+  <a href="{reject_url}" style="background:#dc2626;color:#fff;padding:10px 24px;
+     text-decoration:none;border-radius:4px;font-weight:bold">
+    ✗ REJECT</a>
+</p>
+<p style="margin-top:16px;font-size:9pt;color:#666">
+  This link expires in {hours} hours.<br>
+  To view the full transmittal: <a href="{site}/api/packages/{pkg_id}/transmittal/view">
+  View Transmittal</a>
+</p>
+</body></html>"""
+
+    # Send email
+    smtp_host = cfg.get("smtp_host", "")
+    smtp_user = cfg.get("smtp_user", "")
+    smtp_pass = cfg.get("smtp_pass", "")
+    smtp_from = cfg.get("smtp_from", smtp_user)
+    smtp_port = int(cfg.get("smtp_port", 587))
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = (f"[ACTION REQUIRED] Transmittal Approval: "
+                      f"{pkg['name']} TX-{pkg_id:04d}-R{tx['revision']:02d}")
+    msg["From"]    = smtp_from
+    msg["To"]      = pm_email
+    msg.attach(MIMEText(html_body, "html"))
+
+    if not smtp_host or not smtp_user:
+        # No SMTP configured — save token and return URL for manual sharing
+        send_transmittal_for_approval(db, tx["id"], token, pm_email,
+                                      expiry, sent_by=_current_user())
+        return jsonify({
+            "status": "no_smtp",
+            "message": "SMTP not configured. Share this approval link manually.",
+            "approve_url": approve_url,
+            "reject_url":  reject_url,
+        })
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_from, pm_email, msg.as_string())
+    except Exception as e:
+        return jsonify({"error": f"Email send failed: {e}"}), 500
+
+    send_transmittal_for_approval(db, tx["id"], token, pm_email,
+                                  expiry, sent_by=_current_user())
+    return jsonify({"status": "sent", "sent_to": pm_email})
+
+
+@app.route("/api/transmittal/approve", methods=["GET"])
+def api_transmittal_approve():
+    """Token-based approval endpoint — PM clicks link in email."""
+    from packages_db import resolve_transmittal
+    # Find db (scan all package dbs — only one db in this app)
+    db     = _ensure_pkg_db()
+    token  = request.args.get("token", "")
+    action = request.args.get("action", "approve")
+    name   = request.args.get("name", "")
+    note   = request.args.get("note", "")
+
+    if not token:
+        return "Missing token.", 400
+
+    if action not in ("approve", "reject"):
+        return "Invalid action.", 400
+
+    tx = resolve_transmittal(db, token, action,
+                              by_name=name, reject_note=note)
+    if tx is None:
+        return render_template("approval_result.html",
+                               success=False,
+                               message="This link has expired or already been used.")
+
+    verb = "approved" if action == "approve" else "rejected"
+    return render_template("approval_result.html",
+                           success=(action == "approve"),
+                           message=f"Transmittal Rev {tx['revision']} has been {verb}. Thank you.")
+
+
+@app.route("/api/packages/<int:pkg_id>/transmittal/download-zip",
+           methods=["GET"])
+def api_transmittal_zip(pkg_id):
+    """ZIP of all attached files + transmittal HTML for Veracity upload."""
+    import zipfile, io as _io
+    from packages_db import (get_package, get_package_documents,
+                              get_files, get_latest_transmittal)
+
+    db  = _ensure_pkg_db()
+    pkg = get_package(db, pkg_id)
+    if not pkg:
+        abort(404)
+
+    tx = get_latest_transmittal(db, pkg_id)
+    subs = _load_submissions_list()
+    ctx  = _build_transmittal_context(db, pkg_id, subs)
+
+    buf = _io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # Add transmittal HTML
+        tx_html = render_template("transmittal.html", **ctx)
+        zf.writestr(f"TX-{pkg_id:04d}-R{tx['revision']:02d}_Transmittal.html",
+                    tx_html.encode("utf-8"))
+
+        # Add each attached file
+        all_files = get_files(db, pkg_id)
+        for rec in all_files:
+            fpath = (_pkg_uploads_dir(pkg_id, rec["doc_number"])
+                     / rec["stored_name"])
+            if fpath.exists():
+                # Place in subfolder by doc number
+                arc_name = f"{rec['doc_number']}/{rec['filename']}"
+                zf.write(str(fpath), arc_name)
+
+    buf.seek(0)
+    pkg_slug = pkg["name"].replace(" ", "_")[:40]
+    zip_name = f"{pkg_slug}_TX-{pkg_id:04d}-R{tx['revision']:02d}.zip"
+    return send_file(buf, as_attachment=True,
+                     download_name=zip_name,
+                     mimetype="application/zip")
+
+
 # ── Submission field migration (adds Veracity fields if missing) ──────────────
 def _maybe_add_veracity_cols(df: pd.DataFrame) -> pd.DataFrame:
     """Add EstReplyDate and DNVNotApplicable columns if not present."""

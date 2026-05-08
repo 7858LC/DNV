@@ -49,6 +49,17 @@
     "Admin"
   ],
   "teams_webhook_url": "",
+  "site_url": "http://localhost:5000",
+  "project_name": "Sentinel",
+  "company_name": "Bastion",
+  "smtp_host": "smtp.office365.com",
+  "smtp_port": 587,
+  "smtp_user": "",
+  "smtp_pass": "",
+  "smtp_from": "",
+  "pm_email": "",
+  "pm_name": "Project Manager",
+  "approval_token_hours": 72,
   "sla_digest_warn_bd": 8,
   "sla_digest_breach_bd": 10,
   "holidays": [

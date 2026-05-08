@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Transmittal Approval</title>
+<style>
+  body { font-family: Arial, sans-serif; display: flex; align-items: center;
+         justify-content: center; min-height: 100vh; margin: 0;
+         background: #0f172a; color: #e2e8f0; }
+  .card { background: #1e293b; border-radius: 12px; padding: 48px 56px;
+          text-align: center; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .icon { font-size: 56px; margin-bottom: 20px; }
+  h1 { font-size: 22pt; margin-bottom: 12px; }
+  p  { color: #94a3b8; font-size: 12pt; line-height: 1.6; }
+  .ok  { color: #34d399; }
+  .err { color: #f87171; }
+</style>
+</head>
+<body>
+<div class="card">
+  {% if success %}
+    <div class="icon">✅</div>
+    <h1 class="ok">Approved</h1>
+  {% else %}
+    <div class="icon">❌</div>
+    <h1 class="err">{{ 'Rejected' if 'rejected' in message else 'Link Expired' }}</h1>
+  {% endif %}
+  <p>{{ message }}</p>
+  <p style="margin-top:24px;font-size:10pt">You may close this window.</p>
+</div>
+</body>
+</html>

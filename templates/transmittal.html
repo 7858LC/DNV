@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Document Transmittal — {{ pkg.name }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a2e;
+         background: #fff; padding: 30mm 20mm; max-width: 210mm; margin: 0 auto; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between;
+            align-items: flex-start; border-bottom: 3px solid #1a3a5c;
+            padding-bottom: 12px; margin-bottom: 20px; }
+  .header-left h1 { font-size: 18pt; color: #1a3a5c; letter-spacing: 0.5px; }
+  .header-left .subtitle { font-size: 9pt; color: #666; margin-top: 2px; }
+  .header-right { text-align: right; font-size: 9pt; color: #666; line-height: 1.6; }
+  .tx-ref { font-size: 13pt; font-weight: bold; color: #1a3a5c; }
+
+  /* Metadata grid */
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr;
+               gap: 0; margin-bottom: 20px;
+               border: 1px solid #c0c8d8; }
+  .meta-row { display: contents; }
+  .meta-label { background: #eef2f8; font-weight: bold; font-size: 9pt;
+                padding: 6px 10px; border-bottom: 1px solid #c0c8d8;
+                border-right: 1px solid #c0c8d8; color: #1a3a5c; }
+  .meta-value { padding: 6px 10px; font-size: 10pt;
+                border-bottom: 1px solid #c0c8d8; }
+
+  /* Subject line */
+  .subject-box { background: #1a3a5c; color: #fff; padding: 10px 14px;
+                 margin-bottom: 20px; font-size: 11pt; font-weight: bold; }
+
+  /* Document table */
+  .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 20px;
+               font-size: 9pt; }
+  .doc-table th { background: #1a3a5c; color: #fff; padding: 7px 8px;
+                  text-align: left; font-weight: bold; }
+  .doc-table td { padding: 6px 8px; border-bottom: 1px solid #dde3ee;
+                  vertical-align: top; }
+  .doc-table tr:nth-child(even) td { background: #f5f7fc; }
+  .doc-table tr:last-child td { border-bottom: 2px solid #1a3a5c; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
+           font-size: 8pt; font-weight: bold; }
+  .badge-ok   { background: #d1fae5; color: #065f46; }
+  .badge-warn { background: #fef3c7; color: #92400e; }
+  .badge-na   { background: #f1f5f9; color: #64748b; }
+
+  /* Notes */
+  .notes-box { border: 1px solid #c0c8d8; padding: 10px 14px;
+               margin-bottom: 24px; min-height: 40px; font-size: 10pt; }
+  .notes-label { font-size: 8pt; color: #666; font-weight: bold;
+                 margin-bottom: 4px; }
+
+  /* Signature block */
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px;
+              margin-top: 30px; }
+  .sig-box { border-top: 1px solid #1a3a5c; padding-top: 8px; }
+  .sig-label { font-size: 8pt; color: #666; margin-bottom: 20px; }
+  .sig-name { font-size: 9pt; font-weight: bold; }
+  .sig-role { font-size: 8pt; color: #666; }
+
+  /* Revision history */
+  .rev-table { width: 100%; border-collapse: collapse; font-size: 9pt;
+               margin-top: 30px; }
+  .rev-table th { background: #eef2f8; color: #1a3a5c; padding: 5px 8px;
+                  text-align: left; border: 1px solid #c0c8d8; }
+  .rev-table td { padding: 5px 8px; border: 1px solid #c0c8d8; }
+
+  /* Status stamp */
+  .status-stamp { position: fixed; top: 40px; right: 30px; padding: 8px 18px;
+                  border: 3px solid; border-radius: 4px; transform: rotate(-5deg);
+                  font-size: 14pt; font-weight: bold; opacity: 0.65; }
+  .stamp-approved  { border-color: #15803d; color: #15803d; }
+  .stamp-pending   { border-color: #d97706; color: #d97706; }
+  .stamp-draft     { border-color: #94a3b8; color: #94a3b8; }
+  .stamp-rejected  { border-color: #dc2626; color: #dc2626; }
+
+  @media print {
+    body { padding: 10mm 15mm; }
+    .status-stamp { position: absolute; }
+  }
+</style>
+</head>
+<body>
+
+{% if tx.status == 'Approved' %}
+  <div class="status-stamp stamp-approved">APPROVED</div>
+{% elif tx.status == 'Pending Approval' %}
+  <div class="status-stamp stamp-pending">PENDING APPROVAL</div>
+{% elif tx.status == 'Rejected' %}
+  <div class="status-stamp stamp-rejected">REJECTED</div>
+{% else %}
+  <div class="status-stamp stamp-draft">DRAFT</div>
+{% endif %}
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <h1>{{ company_name | upper }}</h1>
+    <div class="subtitle">Document Transmittal</div>
+  </div>
+  <div class="header-right">
+    <div class="tx-ref">TX-{{ '%04d' % pkg.id }}-R{{ '%02d' % tx.revision }}</div>
+    <div>Date: {{ tx.generated_at[:10] }}</div>
+    {% if pkg.veracity_ref %}<div>Veracity Ref: {{ pkg.veracity_ref }}</div>{% endif %}
+  </div>
+</div>
+
+<!-- Metadata -->
+<div class="meta-grid">
+  <div class="meta-label">To</div>
+  <div class="meta-value">DNV AS — {{ pkg.veracity_ref or 'Veracity Platform' }}</div>
+
+  <div class="meta-label">From</div>
+  <div class="meta-value">{{ company_name }} — {{ tx.generated_by or 'Coordinator' }}</div>
+
+  <div class="meta-label">Project</div>
+  <div class="meta-value">{{ project_name }}</div>
+
+  <div class="meta-label">Package</div>
+  <div class="meta-value">{{ pkg.name }}</div>
+
+  <div class="meta-label">Transmittal No.</div>
+  <div class="meta-value">TX-{{ '%04d' % pkg.id }}-R{{ '%02d' % tx.revision }}</div>
+
+  <div class="meta-label">Revision</div>
+  <div class="meta-value">Rev {{ tx.revision }}</div>
+
+  <div class="meta-label">Status</div>
+  <div class="meta-value"><strong>{{ tx.status }}</strong>
+    {% if tx.approved_at %} — Approved {{ tx.approved_at[:10] }} by {{ tx.approved_by }}{% endif %}
+  </div>
+
+  <div class="meta-label">Documents</div>
+  <div class="meta-value">{{ documents | length }} document(s)</div>
+</div>
+
+<!-- Subject -->
+<div class="subject-box">
+  RE: {{ pkg.name }}{% if pkg.description %} — {{ pkg.description }}{% endif %}
+</div>
+
+<!-- Document table -->
+<table class="doc-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Bastion Doc No.</th>
+      <th>DNV Doc No. (Veracity)</th>
+      <th>Document Title</th>
+      <th>Type</th>
+      <th>Rev</th>
+      <th>Est. Reply</th>
+      <th>Files</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in documents %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td><strong>{{ d.doc_number }}</strong></td>
+      <td>{{ d.dnv_doc_number or '—' }}</td>
+      <td>{{ d.title or '—' }}</td>
+      <td>{{ d.type or '—' }}</td>
+      <td>{{ d.revision or '—' }}</td>
+      <td>{{ d.est_reply_date or '—' }}</td>
+      <td>
+        {% if d.file_count %}
+          <span class="badge badge-ok">{{ d.file_count }} file{{ 's' if d.file_count != 1 }}</span>
+        {% elif d.dnv_not_applicable %}
+          <span class="badge badge-na">N/A</span>
+        {% else %}
+          <span class="badge badge-warn">No file</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Notes -->
+{% if pkg.notes or tx.notes %}
+<div class="notes-label">TRANSMITTAL NOTES</div>
+<div class="notes-box">{{ tx.notes or pkg.notes }}</div>
+{% endif %}
+
+<!-- Signature block -->
+<div class="sig-grid">
+  <div class="sig-box">
+    <div class="sig-label">Prepared by</div>
+    <div class="sig-name">{{ tx.generated_by or '________________' }}</div>
+    <div class="sig-role">Coordinator</div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-label">Approved by (PM)</div>
+    <div class="sig-name">{{ tx.approved_by or '________________' }}</div>
+    <div class="sig-role">Project Manager</div>
+    {% if tx.approved_at %}<div class="sig-role">{{ tx.approved_at[:10] }}</div>{% endif %}
+  </div>
+  <div class="sig-box">
+    <div class="sig-label">Received by (DNV)</div>
+    <div class="sig-name">________________</div>
+    <div class="sig-role">DNV Reviewer</div>
+  </div>
+</div>
+
+<!-- Revision history -->
+{% if all_revisions | length > 1 %}
+<table class="rev-table" style="margin-top:40px">
+  <thead>
+    <tr>
+      <th>Rev</th><th>Date</th><th>Prepared by</th><th>Status</th><th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in all_revisions %}
+    <tr>
+      <td>{{ r.revision }}</td>
+      <td>{{ r.generated_at[:10] }}</td>
+      <td>{{ r.generated_by }}</td>
+      <td>{{ r.status }}</td>
+      <td>{{ r.notes or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</body>
+</html>
