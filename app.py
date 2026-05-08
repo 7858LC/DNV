@@ -600,6 +600,41 @@ def api_csv_update(table, idx):
     return jsonify({"status": "ok"})
 
 
+def _log_deletion(table: str, row: dict) -> None:
+    """Append one line to the deletion audit log whenever a CSV row is deleted."""
+    try:
+        cfg      = load_config()
+        log_dir  = resolve_path(cfg.get("logs_dir", "./logs"))
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "deletions.log"
+
+        user      = _current_user() or "unknown"
+        timestamp = _dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Pick the most human-readable identifier from the row
+        ident = (
+            row.get("DocumentNumber")
+            or row.get("CommentID")
+            or row.get("ActionID")
+            or row.get("TQID")
+            or row.get("id")
+            or f"row-data"
+        )
+
+        # Compact JSON of the full row so it can be restored from the log alone
+        row_json = json.dumps(
+            {k: v for k, v in row.items() if str(v).strip() not in ("", "nan")},
+            ensure_ascii=False
+        )
+
+        line = f"{timestamp} | {table} | {ident} | deleted_by: {user} | {row_json}\n"
+
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception:
+        pass   # logging must never break the main request
+
+
 @app.route("/api/csv/<table>/<int:idx>", methods=["DELETE"])
 def api_csv_delete(table, idx):
     path = _csv_path(table)
@@ -611,8 +646,10 @@ def api_csv_delete(table, idx):
         df = pd.read_csv(path)
         if idx < 0 or idx >= len(df):
             return jsonify({"error": "Row index out of range"}), 404
+        deleted_row = df.iloc[idx].to_dict()
         df = df.drop(index=idx).reset_index(drop=True)
         df.to_csv(path, index=False)
+    _log_deletion(table, deleted_row)
     return jsonify({"status": "ok"})
 
 
