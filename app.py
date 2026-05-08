@@ -25,6 +25,12 @@ from utils import load_config, resolve_path
 from experience_routes import experience_bp
 from comms_routes import comms_bp
 
+# ── CSV write lock ────────────────────────────────────────────────────────────
+# All read-modify-write operations on CSV files must hold this lock.
+# Prevents last-writer-wins data loss when multiple users submit simultaneously.
+# SQLite modules (packages, schedule, comms) handle their own concurrency via WAL.
+_csv_lock = threading.Lock()
+
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.register_blueprint(experience_bp)
 app.register_blueprint(comms_bp)
@@ -484,30 +490,31 @@ def api_import_pdm():
     if not sub_path or not sub_path.exists():
         return jsonify({"error": "submissions.csv not found"}), 500
 
-    sub_df = pd.read_csv(sub_path).fillna("")
-    existing = set(sub_df["PDMDocumentNumber"].astype(str).str.strip())
+    with _csv_lock:
+        sub_df = pd.read_csv(sub_path).fillna("")
+        existing = set(sub_df["PDMDocumentNumber"].astype(str).str.strip())
 
-    added, skipped = [], []
-    for _, row in pdm_df.iterrows():
-        pdm_num = str(row.get("Number", "")).strip()
-        if not pdm_num:
-            continue
-        if pdm_num in existing:
-            skipped.append(pdm_num)
-            continue
-        new_row = {c: "" for c in sub_df.columns}
-        new_row["PDMDocumentNumber"] = pdm_num
-        new_row["DocumentTitle"]     = str(row.get("Name", "")).strip()
-        new_row["Revision"]          = str(row.get("Revision", "")).strip()
-        new_row["DocumentType"]      = str(row.get("Category", "")).strip()
-        new_row["PDMApprover"]       = str(row.get("Checked In By", "")).strip()
-        new_row["PDMApprovalDate"]   = str(row.get("Date Modified", "")).strip()
-        new_row["Status"]            = "New"
-        new_row["DocumentNumber"]    = pdm_num   # default doc number to PDM number
-        added.append(pdm_num)
-        sub_df = pd.concat([sub_df, pd.DataFrame([new_row])], ignore_index=True)
+        added, skipped = [], []
+        for _, row in pdm_df.iterrows():
+            pdm_num = str(row.get("Number", "")).strip()
+            if not pdm_num:
+                continue
+            if pdm_num in existing:
+                skipped.append(pdm_num)
+                continue
+            new_row = {c: "" for c in sub_df.columns}
+            new_row["PDMDocumentNumber"] = pdm_num
+            new_row["DocumentTitle"]     = str(row.get("Name", "")).strip()
+            new_row["Revision"]          = str(row.get("Revision", "")).strip()
+            new_row["DocumentType"]      = str(row.get("Category", "")).strip()
+            new_row["PDMApprover"]       = str(row.get("Checked In By", "")).strip()
+            new_row["PDMApprovalDate"]   = str(row.get("Date Modified", "")).strip()
+            new_row["Status"]            = "New"
+            new_row["DocumentNumber"]    = pdm_num
+            added.append(pdm_num)
+            sub_df = pd.concat([sub_df, pd.DataFrame([new_row])], ignore_index=True)
 
-    sub_df.to_csv(sub_path, index=False)
+        sub_df.to_csv(sub_path, index=False)
     return jsonify({"status": "ok", "added": added, "skipped": skipped,
                     "added_count": len(added), "skipped_count": len(skipped)})
 
@@ -549,16 +556,16 @@ def api_csv_create(table):
     body = request.get_json(force=True) or {}
     if not path.exists():
         return jsonify({"error": "CSV not found"}), 404
-    df = _maybe_add_audit_cols(pd.read_csv(path))
-    new_row = {c: body.get(c, "") for c in df.columns}
-    # Inject audit fields
     user = _current_user()
     now  = _dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    if "created_by" in df.columns: new_row["created_by"] = user
-    if "updated_by" in df.columns: new_row["updated_by"] = user
-    if "updated_at" in df.columns: new_row["updated_at"] = now
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    df.to_csv(path, index=False)
+    with _csv_lock:
+        df = _maybe_add_audit_cols(pd.read_csv(path))
+        new_row = {c: body.get(c, "") for c in df.columns}
+        if "created_by" in df.columns: new_row["created_by"] = user
+        if "updated_by" in df.columns: new_row["updated_by"] = user
+        if "updated_at" in df.columns: new_row["updated_at"] = now
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        df.to_csv(path, index=False)
     return jsonify({"status": "ok"})
 
 
@@ -570,26 +577,26 @@ def api_csv_update(table, idx):
     body = request.get_json(force=True) or {}
     if not path.exists():
         return jsonify({"error": "CSV not found"}), 404
-    df = _maybe_add_audit_cols(pd.read_csv(path))
-    if idx < 0 or idx >= len(df):
-        return jsonify({"error": "Row index out of range"}), 404
-    # Validate Status enum for submissions
-    if table == "submissions" and "Status" in body:
-        allowed = _submission_statuses()
-        if allowed and body["Status"] not in allowed:
-            return jsonify({
-                "error": f"Invalid status '{body['Status']}'.",
-                "allowed": allowed,
-            }), 400
-    for col, val in body.items():
-        if col != "_idx" and col in df.columns:
-            df.at[idx, col] = val
-    # Inject audit fields
     user = _current_user()
     now  = _dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    if "updated_by" in df.columns: df.at[idx, "updated_by"] = user
-    if "updated_at" in df.columns: df.at[idx, "updated_at"] = now
-    df.to_csv(path, index=False)
+    with _csv_lock:
+        df = _maybe_add_audit_cols(pd.read_csv(path))
+        if idx < 0 or idx >= len(df):
+            return jsonify({"error": "Row index out of range"}), 404
+        # Validate Status enum for submissions
+        if table == "submissions" and "Status" in body:
+            allowed = _submission_statuses()
+            if allowed and body["Status"] not in allowed:
+                return jsonify({
+                    "error": f"Invalid status '{body['Status']}'.",
+                    "allowed": allowed,
+                }), 400
+        for col, val in body.items():
+            if col != "_idx" and col in df.columns:
+                df.at[idx, col] = val
+        if "updated_by" in df.columns: df.at[idx, "updated_by"] = user
+        if "updated_at" in df.columns: df.at[idx, "updated_at"] = now
+        df.to_csv(path, index=False)
     return jsonify({"status": "ok"})
 
 
@@ -600,11 +607,12 @@ def api_csv_delete(table, idx):
         return jsonify({"error": "Unknown table"}), 400
     if not path.exists():
         return jsonify({"error": "CSV not found"}), 404
-    df = pd.read_csv(path)
-    if idx < 0 or idx >= len(df):
-        return jsonify({"error": "Row index out of range"}), 404
-    df = df.drop(index=idx).reset_index(drop=True)
-    df.to_csv(path, index=False)
+    with _csv_lock:
+        df = pd.read_csv(path)
+        if idx < 0 or idx >= len(df):
+            return jsonify({"error": "Row index out of range"}), 404
+        df = df.drop(index=idx).reset_index(drop=True)
+        df.to_csv(path, index=False)
     return jsonify({"status": "ok"})
 
 
@@ -791,32 +799,33 @@ def api_submissions_transition(doc_number):
     if not to_status:
         return jsonify({"error": "to_status required"}), 400
 
-    # Read current status from CSV
     sub_path = _csv_path("submissions")
     if not sub_path or not sub_path.exists():
         return jsonify({"error": "submissions.csv not found"}), 500
 
-    df = pd.read_csv(sub_path).fillna("")
-    df = _maybe_add_audit_cols(df)
-    mask = df["DocumentNumber"].astype(str).str.strip() == doc_number
-    if not mask.any():
+    # Validate transition before acquiring lock (read-only, safe outside lock)
+    probe_df     = pd.read_csv(sub_path).fillna("")
+    probe_mask   = probe_df["DocumentNumber"].astype(str).str.strip() == doc_number
+    if not probe_mask.any():
         return jsonify({"error": f"Document '{doc_number}' not found"}), 404
-
-    idx = df.index[mask][0]
-    from_status = str(df.at[idx, "Status"]).strip()
-
+    from_status  = str(probe_df.at[probe_df.index[probe_mask][0], "Status"]).strip()
     err = validate_transition(from_status, to_status, role)
     if err:
         return jsonify({"error": err}), 403
 
-    # Write new status to CSV
-    now  = _dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    df.at[idx, "Status"]     = to_status
-    df.at[idx, "updated_by"] = user
-    df.at[idx, "updated_at"] = now
-    df.to_csv(sub_path, index=False)
+    now = _dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    with _csv_lock:
+        df   = _maybe_add_audit_cols(pd.read_csv(sub_path).fillna(""))
+        mask = df["DocumentNumber"].astype(str).str.strip() == doc_number
+        if not mask.any():
+            return jsonify({"error": f"Document '{doc_number}' not found"}), 404
+        idx  = df.index[mask][0]
+        df.at[idx, "Status"]     = to_status
+        df.at[idx, "updated_by"] = user
+        df.at[idx, "updated_at"] = now
+        df.to_csv(sub_path, index=False)
 
-    # Log to SQLite
+    # Log to SQLite (outside lock — SQLite handles its own concurrency)
     log_transition(db, doc_number, from_status, to_status, user, note)
 
     return jsonify({
@@ -873,36 +882,36 @@ def api_new_dnv_comment():
     if not path or not path.exists():
         return jsonify({"error": "dnv_comments.csv not found"}), 500
 
-    df = pd.read_csv(path).fillna("")
+    today      = _dt.date.today().isoformat()
+    session    = _get_session()
+    entered_by = session.get("name", "")
 
-    comment_id  = _next_bc_comment_id()
-    today       = _dt.date.today().isoformat()
-    session     = _get_session()
-    entered_by  = session.get("name", "")
+    with _csv_lock:
+        df         = pd.read_csv(path).fillna("")
+        comment_id = _next_bc_comment_id()   # reads inside lock → no duplicate IDs
 
-    new_row = {col: "" for col in df.columns}
-    new_row.update({
-        "CommentID":        comment_id,
-        "Status":           data.get("Status",     "Open"),
-        "Type":             data.get("Type",        "Action Required"),
-        "Title":            data.get("Title",        ""),
-        "Description":      data.get("Description", ""),
-        "Discipline":       data.get("Discipline",  ""),
-        "RuleRef":          data.get("RuleRef",     ""),
-        "IssueDate":        data.get("IssueDate",   today),
-        "IssuedBy":         data.get("IssuedBy",    entered_by),
-        "ActionNeededBy":   data.get("ActionNeededBy", ""),
-        "ActionNeeded":     data.get("ActionNeeded", ""),
-        "LinkedDocuments":  data.get("LinkedDocuments", ""),
-        "LinkedDocTitles":  data.get("LinkedDocTitles", ""),
-        # Internal fields — entered by Bastion only
-        "DEEPInternalNotes":  data.get("DEEPInternalNotes", ""),
-        "ResponsibleParty":   data.get("ResponsibleParty",  ""),
-        "ClosedDate":         "",
-    })
+        new_row = {col: "" for col in df.columns}
+        new_row.update({
+            "CommentID":        comment_id,
+            "Status":           data.get("Status",     "Open"),
+            "Type":             data.get("Type",        "Action Required"),
+            "Title":            data.get("Title",        ""),
+            "Description":      data.get("Description", ""),
+            "Discipline":       data.get("Discipline",  ""),
+            "RuleRef":          data.get("RuleRef",     ""),
+            "IssueDate":        data.get("IssueDate",   today),
+            "IssuedBy":         data.get("IssuedBy",    entered_by),
+            "ActionNeededBy":   data.get("ActionNeededBy", ""),
+            "ActionNeeded":     data.get("ActionNeeded", ""),
+            "LinkedDocuments":  data.get("LinkedDocuments", ""),
+            "LinkedDocTitles":  data.get("LinkedDocTitles", ""),
+            "DEEPInternalNotes":  data.get("DEEPInternalNotes", ""),
+            "ResponsibleParty":   data.get("ResponsibleParty",  ""),
+            "ClosedDate":         "",
+        })
 
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    df.to_csv(path, index=False)
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        df.to_csv(path, index=False)
 
     return jsonify({"status": "ok", "comment_id": comment_id}), 201
 
