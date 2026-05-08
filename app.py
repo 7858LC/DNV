@@ -1345,6 +1345,47 @@ def api_packages_by_doc(doc_number):
     return jsonify(get_document_packages(db, doc_number))
 
 
+@app.route("/api/packages/<int:pkg_id>/eligible-docs", methods=["GET"])
+def api_package_eligible_docs(pkg_id):
+    """
+    Return submissions eligible to be added to this package.
+
+    Eligible = Bastion-approved (status not in Draft/Internal Review)
+               AND not already in this package.
+
+    Returns list of {doc_number, title, status, revision, discipline}.
+    """
+    from packages_db import get_package_documents
+
+    # Statuses that have NOT yet passed Bastion internal review
+    NOT_READY = {"Draft", "Internal Review"}
+
+    db        = _ensure_pkg_db()
+    subs      = _load_submissions_list()
+    in_pkg    = {r["doc_number"]
+                 for r in get_package_documents(db, pkg_id)}
+
+    eligible = []
+    for s in subs:
+        dn     = str(s.get("DocumentNumber", "")).strip()
+        status = str(s.get("Status", "")).strip()
+        if not dn:
+            continue
+        if status in NOT_READY:
+            continue
+        if dn in in_pkg:
+            continue
+        eligible.append({
+            "doc_number":  dn,
+            "title":       str(s.get("DocumentTitle", "")).strip(),
+            "status":      status,
+            "revision":    str(s.get("Revision", "")).strip(),
+            "discipline":  str(s.get("DNVDisciplineQueue", "")).strip(),
+        })
+
+    return jsonify(eligible)
+
+
 @app.route("/api/packages/<int:pkg_id>/import-veracity", methods=["POST"])
 def api_package_import_veracity(pkg_id):
     """

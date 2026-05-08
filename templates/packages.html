@@ -157,6 +157,27 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
   padding: 5px 10px; border-radius: 3px; outline: none; }
 .add-doc-row input:focus { border-color: var(--blue); }
 
+/* eligible-docs dropdown */
+.eligible-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+  background: var(--surface2); border: 1px solid var(--blue);
+  border-radius: 5px; max-height: 260px; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+}
+.eligible-item {
+  padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.eligible-item:last-child { border-bottom: none; }
+.eligible-item:hover, .eligible-item.active { background: rgba(59,130,246,0.18); }
+.eligible-item .ei-num  { font-family: var(--font-data); font-size: 12px;
+  font-weight: 600; color: var(--fg); }
+.eligible-item .ei-title { font-size: 11px; color: var(--muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.eligible-item .ei-meta { font-size: 10px; color: var(--blue-lt); }
+.eligible-none { padding: 12px; text-align: center; color: var(--muted);
+  font-size: 12px; }
+
 /* pulse highlight for add row after package creation */
 @keyframes pulse-row {
   0%,100% { background: var(--surface); }
@@ -399,6 +420,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadPackages(), loadSubmissions()]);
 });
 
+// Close eligible dropdown when clicking outside the add-doc area
+document.addEventListener('click', e => {
+  if (!e.target.closest('.add-doc-select-wrap')) hideEligibleDropdown();
+});
+
 async function loadPackages() {
   try {
     const r = await fetch('/api/packages');
@@ -452,6 +478,8 @@ async function selectPackage(id) {
     _selectedPkg = await r.json();
     renderDetail();
     renderSync();
+    // Load eligible docs for the add-doc dropdown (after renderDetail creates the input)
+    await loadEligibleDocs(id);
   } catch(e) { console.error('selectPackage', e); }
 }
 
@@ -559,8 +587,14 @@ function renderDetail() {
       <span style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap;align-self:center">
         + ADD DOC
       </span>
-      <input id="add-doc-num" placeholder="Bastion doc number (e.g. BT3345_0001)"
-             onkeydown="if(event.key==='Enter')addDocToPackage(${pkg.id})">
+      <div class="add-doc-select-wrap" style="flex:1;position:relative">
+        <input id="add-doc-num" placeholder="Search approved submissions…"
+               autocomplete="off"
+               oninput="filterEligible(this.value)"
+               onkeydown="onEligibleKey(event,${pkg.id})"
+               onfocus="showEligibleDropdown()">
+        <div id="eligible-dropdown" class="eligible-dropdown" style="display:none"></div>
+      </div>
       <input id="add-dnv-num" placeholder="DNV doc # (D000004xxx)" style="width:160px">
       <input id="add-reply"   placeholder="Est. reply date" type="date" style="width:140px">
       <button class="btn primary" onclick="addDocToPackage(${pkg.id})">+ Add</button>
@@ -619,10 +653,95 @@ function renderSync() {
   }).join('');
 }
 
+// ── Eligible-docs dropdown ────────────────────────────
+let _eligibleDocs  = [];   // full list loaded from server
+let _eligibleIdx   = -1;   // keyboard cursor
+
+async function loadEligibleDocs(pkgId) {
+  try {
+    const r = await fetch(`/api/packages/${pkgId}/eligible-docs`);
+    _eligibleDocs = r.ok ? await r.json() : [];
+  } catch { _eligibleDocs = []; }
+}
+
+function showEligibleDropdown() {
+  filterEligible(document.getElementById('add-doc-num').value);
+}
+
+function filterEligible(q) {
+  const dd = document.getElementById('eligible-dropdown');
+  if (!dd) return;
+  const term = q.trim().toLowerCase();
+  const hits  = term
+    ? _eligibleDocs.filter(d =>
+        d.doc_number.toLowerCase().includes(term) ||
+        d.title.toLowerCase().includes(term) ||
+        d.discipline.toLowerCase().includes(term))
+    : _eligibleDocs;
+
+  if (!hits.length) {
+    dd.innerHTML = `<div class="eligible-none">${
+      _eligibleDocs.length === 0
+        ? 'No Bastion-approved submissions available'
+        : 'No matches — try a different search term'
+    }</div>`;
+    dd.style.display = 'block';
+    _eligibleIdx = -1;
+    return;
+  }
+
+  _eligibleIdx = -1;
+  dd.innerHTML = hits.map((d, i) => `
+    <div class="eligible-item" data-num="${esc(d.doc_number)}"
+         onmousedown="selectEligible('${esc(d.doc_number)}')"
+         data-i="${i}">
+      <span class="ei-num">${esc(d.doc_number)}</span>
+      <span class="ei-title">${esc(d.title || '—')}</span>
+      <span class="ei-meta">${esc(d.status)}${d.revision ? ' · Rev ' + esc(d.revision) : ''}${d.discipline ? ' · ' + esc(d.discipline) : ''}</span>
+    </div>`).join('');
+  dd.style.display = 'block';
+}
+
+function selectEligible(docNum) {
+  document.getElementById('add-doc-num').value = docNum;
+  document.getElementById('eligible-dropdown').style.display = 'none';
+  _eligibleIdx = -1;
+  document.getElementById('add-dnv-num').focus();
+}
+
+function hideEligibleDropdown() {
+  const dd = document.getElementById('eligible-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function onEligibleKey(e, pkgId) {
+  const dd    = document.getElementById('eligible-dropdown');
+  const items = dd ? dd.querySelectorAll('.eligible-item') : [];
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _eligibleIdx = Math.min(_eligibleIdx + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('active', i === _eligibleIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _eligibleIdx = Math.max(_eligibleIdx - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('active', i === _eligibleIdx));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_eligibleIdx >= 0 && items[_eligibleIdx]) {
+      selectEligible(items[_eligibleIdx].dataset.num);
+    } else {
+      addDocToPackage(pkgId);
+    }
+  } else if (e.key === 'Escape') {
+    hideEligibleDropdown();
+  }
+}
+
 // ── Add / remove documents ────────────────────────────
 async function addDocToPackage(pkgId) {
   const doc = document.getElementById('add-doc-num').value.trim();
   if (!doc) { document.getElementById('add-doc-num').focus(); return; }
+  hideEligibleDropdown();
   const dnv   = document.getElementById('add-dnv-num').value.trim();
   const reply = document.getElementById('add-reply').value.trim();
   const r = await fetch(`/api/packages/${pkgId}/documents`, {
@@ -637,6 +756,8 @@ async function addDocToPackage(pkgId) {
   document.getElementById('add-dnv-num').value = '';
   document.getElementById('add-reply').value   = '';
   await refreshSelected();
+  // Reload eligible list (added doc is now excluded)
+  await loadEligibleDocs(pkgId);
 }
 
 async function removeDoc(pkgId, docNum) {
