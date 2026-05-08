@@ -301,23 +301,27 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
       <div class="detail-empty" id="detail-empty">Select a package</div>
     </div>
 
-    <!-- RIGHT: Veracity sync -->
+    <!-- RIGHT: Transmittal + Veracity sync -->
     <div id="sync-pane">
+
+      <!-- TRANSMITTAL PANEL — always visible at top -->
+      <div id="tx-panel" style="border-bottom:2px solid var(--border);padding:12px 14px;flex-shrink:0">
+        <div style="font-family:var(--font-head);font-size:11px;font-weight:600;
+                    letter-spacing:.1em;color:var(--muted);text-transform:uppercase;
+                    margin-bottom:8px">📄 TRANSMITTAL</div>
+        <div id="tx-status-row" style="margin-bottom:8px;font-size:11px;color:var(--muted)">
+          Select a package
+        </div>
+        <div id="tx-actions" style="display:flex;flex-direction:column;gap:5px"></div>
+      </div>
+
+      <!-- VERACITY SYNC — scrollable below -->
       <div class="sync-header">
         <div class="dnv-dot"></div>
         DNV VERACITY SYNC
       </div>
       <div class="sync-body" id="sync-body">
         <div class="sync-empty">Select a package to see<br>Veracity field comparison</div>
-      </div>
-
-      <!-- TRANSMITTAL PANEL -->
-      <div id="tx-panel" style="display:none;border-top:2px solid var(--border);padding:14px">
-        <div style="font-family:var(--font-head);font-size:11px;font-weight:600;
-                    letter-spacing:.1em;color:var(--muted);text-transform:uppercase;
-                    margin-bottom:10px">📄 TRANSMITTAL</div>
-        <div id="tx-status-row" style="margin-bottom:10px"></div>
-        <div id="tx-actions" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
     </div>
 
@@ -395,22 +399,35 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
 
 <!-- FILE ATTACHMENT PANEL MODAL -->
 <div class="modal-overlay" id="file-panel-overlay" onclick="if(event.target===this)closeFilePanel()">
-  <div class="modal-box" style="max-width:520px">
-    <h3>Attached Files — <span id="fp-docnum" style="color:var(--blue-lt)"></span></h3>
-    <p style="color:var(--muted);font-size:12px;margin:0 0 14px">
-      Upload the document file(s) to include in the transmittal package.
-    </p>
+  <div class="modal-box" style="max-width:500px">
+    <h3>Attach Files — <span id="fp-docnum" style="color:var(--blue-lt)"></span></h3>
 
-    <div id="fp-file-list" style="margin-bottom:14px;min-height:40px"></div>
+    <!-- Existing files list -->
+    <div id="fp-file-list" style="margin-bottom:12px;min-height:32px"></div>
 
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-      <input type="file" id="fp-file-input" multiple
-             style="flex:1;color:var(--fg);font-size:12px">
-      <button class="btn primary" onclick="uploadFiles()">↑ Upload</button>
+    <!-- Drop zone (compact, explicit) -->
+    <div id="fp-dropzone"
+         style="border:2px dashed var(--blue);border-radius:6px;padding:16px 20px;
+                text-align:center;cursor:pointer;margin-bottom:10px;
+                transition:background .15s"
+         onclick="document.getElementById('fp-file-input').click()"
+         ondragover="fpDragOver(event)" ondragleave="fpDragLeave(event)"
+         ondrop="fpDrop(event)">
+      <div style="font-size:20px;margin-bottom:4px">📎</div>
+      <div style="font-size:12px;color:var(--fg);font-weight:600">
+        Click to browse or drag files here
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">
+        PDF, DWG, DOCX, XLSX — any format accepted
+      </div>
     </div>
-    <div id="fp-upload-status" style="font-size:12px;color:var(--muted);min-height:18px"></div>
+    <!-- Hidden native file input -->
+    <input type="file" id="fp-file-input" multiple
+           style="display:none" onchange="uploadFiles()">
 
-    <div class="modal-actions" style="margin-top:16px">
+    <div id="fp-upload-status" style="font-size:12px;color:var(--muted);min-height:18px;margin-bottom:8px"></div>
+
+    <div class="modal-actions">
       <button class="btn" onclick="closeFilePanel()">Close</button>
     </div>
   </div>
@@ -463,10 +480,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadPackages(), loadSubmissions()]);
 });
 
+// Prevent browser native "drop files here" overlay on the whole page
+document.addEventListener('dragover', e => {
+  if (!e.target.closest('#fp-dropzone')) e.preventDefault();
+});
+document.addEventListener('drop', e => {
+  if (!e.target.closest('#fp-dropzone')) e.preventDefault();
+});
+
 // Close eligible dropdown when clicking outside the add-doc area
 document.addEventListener('click', e => {
   if (!e.target.closest('.add-doc-select-wrap')) hideEligibleDropdown();
 });
+
+// ── File drop zone handlers ───────────────────────────
+function fpDragOver(e) {
+  e.preventDefault();
+  document.getElementById('fp-dropzone').style.background = 'rgba(59,130,246,0.12)';
+}
+function fpDragLeave(e) {
+  document.getElementById('fp-dropzone').style.background = '';
+}
+async function fpDrop(e) {
+  e.preventDefault();
+  document.getElementById('fp-dropzone').style.background = '';
+  const files = e.dataTransfer.files;
+  if (!files.length) return;
+  // Feed dropped files into the upload function directly
+  await uploadFileList(files);
+}
 
 async function loadPackages() {
   try {
@@ -906,13 +948,18 @@ async function refreshFileList() {
 }
 
 async function uploadFiles() {
-  const input  = document.getElementById('fp-file-input');
-  const status = document.getElementById('fp-upload-status');
-  if (!input.files.length) { status.textContent = 'Select a file first.'; return; }
+  const input = document.getElementById('fp-file-input');
+  if (!input.files.length) return;
+  await uploadFileList(input.files);
+  input.value = '';
+}
 
-  status.textContent = 'Uploading…';
+async function uploadFileList(files) {
+  const status = document.getElementById('fp-upload-status');
+  status.textContent = `Uploading ${files.length} file(s)…`;
+  status.style.color = 'var(--muted)';
   let ok = 0, fail = 0;
-  for (const file of input.files) {
+  for (const file of files) {
     const fd = new FormData();
     fd.append('file', file);
     try {
@@ -923,13 +970,11 @@ async function uploadFiles() {
       r.ok ? ok++ : fail++;
     } catch { fail++; }
   }
-  status.textContent = `${ok} uploaded${fail ? ', ' + fail + ' failed' : ''}.`;
-  input.value = '';
+  status.style.color = fail ? 'var(--red)' : 'var(--green)';
+  status.textContent = `✓ ${ok} uploaded${fail ? '  ⚠ ' + fail + ' failed' : ''}.`;
   await refreshFileList();
-  // Refresh counts and transmittal panel
   await loadFileCounts(_fpPkgId);
   await refreshTransmittalPanel(_fpPkgId);
-  // Re-render doc table to update file count badges
   if (_selectedPkg) renderDetail();
 }
 
@@ -952,7 +997,12 @@ function fmtBytes(b) {
 // ── Transmittal panel ─────────────────────────────────
 async function refreshTransmittalPanel(pkgId) {
   const panel = document.getElementById('tx-panel');
-  if (!pkgId) { panel.style.display = 'none'; return; }
+  if (!pkgId) {
+    document.getElementById('tx-status-row').innerHTML =
+      '<span style="color:var(--muted)">Select a package</span>';
+    document.getElementById('tx-actions').innerHTML = '';
+    return;
+  }
 
   let data;
   try {
