@@ -1345,6 +1345,84 @@ def api_packages_by_doc(doc_number):
     return jsonify(get_document_packages(db, doc_number))
 
 
+@app.route("/api/packages/<int:pkg_id>/import-veracity", methods=["POST"])
+def api_package_import_veracity(pkg_id):
+    """
+    Bulk-import Veracity doc number mappings from a CSV upload.
+
+    Expected CSV columns (case-insensitive, extras ignored):
+      doc_number       — Bastion internal number (must already be in package)
+      dnv_doc_number   — Veracity D000xxxxxx reference
+      est_reply_date   — optional, ISO date YYYY-MM-DD
+
+    Returns JSON: {updated, skipped, errors}
+    """
+    from packages_db import get_package_documents, update_document
+    import io as _io
+
+    db = _ensure_pkg_db()
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    f = request.files["file"]
+    if not f.filename.lower().endswith(".csv"):
+        return jsonify({"error": "File must be a .csv"}), 400
+
+    try:
+        raw = f.read().decode("utf-8-sig")   # strip BOM if Excel-exported
+        df  = pd.read_csv(_io.StringIO(raw))
+    except Exception as e:
+        return jsonify({"error": f"Could not parse CSV: {e}"}), 400
+
+    # Normalise column names: strip whitespace, lowercase
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+
+    if "doc_number" not in df.columns or "dnv_doc_number" not in df.columns:
+        return jsonify({
+            "error": "CSV must have columns: doc_number, dnv_doc_number"
+        }), 400
+
+    # Index existing package documents for fast membership check
+    existing = {r["doc_number"] for r in get_package_documents(db, pkg_id)}
+
+    updated = 0
+    skipped = []
+    errors  = []
+
+    for _, row in df.iterrows():
+        doc_num = str(row.get("doc_number", "")).strip()
+        dnv_num = str(row.get("dnv_doc_number", "")).strip()
+
+        if not doc_num or not dnv_num:
+            continue   # blank rows ignored silently
+
+        if doc_num not in existing:
+            skipped.append(doc_num)
+            continue
+
+        fields = {"dnv_doc_number": dnv_num}
+
+        # Optional est_reply_date
+        if "est_reply_date" in df.columns:
+            erd = str(row.get("est_reply_date", "")).strip()
+            if erd and erd.lower() not in ("nan", "none", ""):
+                fields["est_reply_date"] = erd
+
+        try:
+            update_document(db, pkg_id, doc_num, fields)
+            updated += 1
+        except Exception as e:
+            errors.append({"doc_number": doc_num, "error": str(e)})
+
+    return jsonify({
+        "updated": updated,
+        "skipped": skipped,
+        "errors":  errors,
+        "message": f"{updated} document(s) updated"
+    })
+
+
 # ── Submission field migration (adds Veracity fields if missing) ──────────────
 def _maybe_add_veracity_cols(df: pd.DataFrame) -> pd.DataFrame:
     """Add EstReplyDate and DNVNotApplicable columns if not present."""

@@ -339,6 +339,37 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
   </div>
 </div>
 
+<!-- IMPORT VERACITY CSV MODAL -->
+<div class="modal-overlay" id="import-veracity-overlay" onclick="if(event.target===this)closeImportVeracity()">
+  <div class="modal-box" style="max-width:480px">
+    <h3>Import Veracity CSV</h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 16px">
+      Upload a CSV with columns <code>doc_number</code> and <code>dnv_doc_number</code>.<br>
+      Optional: <code>est_reply_date</code> (YYYY-MM-DD).<br>
+      Only documents already in this package will be updated.
+    </p>
+
+    <div style="margin-bottom:12px">
+      <label class="form-label">CSV File</label>
+      <input type="file" id="iv-file" accept=".csv" style="width:100%;color:var(--fg)">
+    </div>
+
+    <div id="iv-template" style="margin-bottom:14px;font-size:12px;color:var(--muted)">
+      Need a template?
+      <a href="#" onclick="downloadImportTemplate();return false" style="color:var(--blue-lt)">
+        ↓ Download blank CSV
+      </a>
+    </div>
+
+    <div id="iv-result" style="display:none;padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImportVeracity()">Close</button>
+      <button class="btn amber" onclick="submitImportVeracity()">↑ Import</button>
+    </div>
+  </div>
+</div>
+
 <script src="/static/auth.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════
@@ -462,6 +493,7 @@ function renderDetail() {
         <button class="btn" onclick="openEditPackage()">Edit</button>
         <button class="btn green" onclick="exportPackage(${pkg.id},'csv')">↓ Export CSV</button>
         <button class="btn primary" onclick="exportPackage(${pkg.id},'json')">↓ JSON</button>
+        <button class="btn amber" onclick="openImportVeracity(${pkg.id})">↑ Import Veracity CSV</button>
       </div>
     </div>
 
@@ -618,6 +650,93 @@ function editCell(td, pkgId, docNum, field) {
 // ── Export ────────────────────────────────────────────
 function exportPackage(pkgId, fmt) {
   window.location.href = `/api/packages/${pkgId}/export?format=${fmt}`;
+}
+
+// ── Import Veracity CSV ───────────────────────────────
+let _importPkgId = null;
+
+function openImportVeracity(pkgId) {
+  _importPkgId = pkgId;
+  document.getElementById('iv-file').value = '';
+  const res = document.getElementById('iv-result');
+  res.style.display = 'none';
+  res.textContent = '';
+  document.getElementById('import-veracity-overlay').style.display = 'flex';
+}
+
+function closeImportVeracity() {
+  document.getElementById('import-veracity-overlay').style.display = 'none';
+}
+
+async function submitImportVeracity() {
+  const fileInput = document.getElementById('iv-file');
+  const res       = document.getElementById('iv-result');
+
+  if (!fileInput.files.length) {
+    res.style.display = 'block';
+    res.style.background = 'rgba(239,68,68,0.15)';
+    res.style.color = 'var(--red)';
+    res.textContent = 'Please select a CSV file first.';
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+
+  res.style.display = 'block';
+  res.style.background = 'rgba(100,116,139,0.15)';
+  res.style.color = 'var(--muted)';
+  res.textContent = 'Importing…';
+
+  try {
+    const r    = await fetch(`/api/packages/${_importPkgId}/import-veracity`, {
+      method: 'POST', body: fd
+    });
+    const data = await r.json();
+
+    if (!r.ok) {
+      res.style.background = 'rgba(239,68,68,0.15)';
+      res.style.color = 'var(--red)';
+      res.textContent = data.error || 'Import failed.';
+      return;
+    }
+
+    res.style.background = 'rgba(34,197,94,0.12)';
+    res.style.color = 'var(--green)';
+    let msg = `✓ ${data.updated} document(s) updated.`;
+    if (data.skipped && data.skipped.length)
+      msg += `  Skipped (not in package): ${data.skipped.join(', ')}.`;
+    if (data.errors && data.errors.length)
+      msg += `  Errors: ${data.errors.map(e => e.doc_number).join(', ')}.`;
+    res.textContent = msg;
+
+    // Refresh the detail panel to show updated DNV doc numbers
+    if (data.updated > 0) await refreshSelected();
+  } catch(e) {
+    res.style.background = 'rgba(239,68,68,0.15)';
+    res.style.color = 'var(--red)';
+    res.textContent = 'Network error: ' + e.message;
+  }
+}
+
+function downloadImportTemplate() {
+  // Grab current package's doc_numbers as pre-filled rows
+  const docs = _selectedPkg ? _selectedPkg.documents : [];
+  const rows = [['doc_number','dnv_doc_number','est_reply_date']];
+  if (docs.length) {
+    docs.forEach(d => rows.push([d.doc_number, d.dnv_doc_number || '', d.est_reply_date || '']));
+  } else {
+    rows.push(['BT3345_0001','D000004317','2026-06-15']);
+    rows.push(['BT3345_0002','D000004318','']);
+  }
+  const csv  = rows.map(r => r.join(',')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a    = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: 'veracity_import_template.csv'
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ── Refresh ───────────────────────────────────────────
