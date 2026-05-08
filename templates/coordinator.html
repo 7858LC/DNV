@@ -681,6 +681,7 @@ input[type="date"].form-control { cursor: pointer; color-scheme: dark; }
       <span id="health-badge" class="health-badge">—</span>
       <a href="/" class="btn">← DASHBOARD</a>
       <a href="/submissions" class="btn">SUBMISSIONS</a>
+      <a href="/packages" class="btn">PACKAGES</a>
       <a href="/schedule" class="btn">SCHEDULE</a>
       <a href="/docreq" class="btn">DOC REQUIREMENTS</a>
       <a href="/kanban" class="btn">KANBAN</a>
@@ -1027,8 +1028,10 @@ const FORM_DEFS = {
     // ── DEEP Arena ───────────────────────────────────────
     {f:'DEEPArenaRef',       l:'DEEP Arena Reference Number',     t:'text',   grp:'DEEP ARENA → DNV VERACITY'},
     {f:'DEEPSubmitDate',     l:'Date Submitted to DEEP Arena',    t:'date'},
-    {f:'VeracityRef',        l:'DNV Veracity Reference Number',   t:'text'},
+    {f:'VeracityRef',        l:'DNV Veracity Document Number (D000xxxxxx)', t:'text'},
     {f:'VeracitySubmitDate', l:'Date DEEP Submitted to Veracity', t:'date'},
+    {f:'EstReplyDate',       l:'Est. Reply Date (from Veracity)', t:'date'},
+    {f:'DNVNotApplicable',   l:'Not Applicable for DNV',          t:'select', opts:['','Yes','No']},
     // ── Status & notes ───────────────────────────────────
     {f:'Status',             l:'Pipeline Status',                 t:'select', opts:['New','Under Triage','Submitted to DEEP','With DNV (Veracity)','TQ Issued','TQ Responded','Resubmitted to DEEP','Accepted','Accepted with Comments','Rejected','On Hold'], grp:'STATUS'},
     {f:'Notes',              l:'Coordinator Notes',               t:'textarea', full:true},

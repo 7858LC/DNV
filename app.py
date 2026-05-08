@@ -1170,6 +1170,194 @@ def api_sched_links_delete(task_id, doc_number):
     return jsonify({"status": "ok", "removed": ok})
 
 
+# ── PACKAGES / VERACITY MODULE ───────────────────────────────────────────────
+
+def _pkg_db_path() -> Path:
+    cfg = load_config()
+    return resolve_path(cfg["state_dir"]) / "packages.db"
+
+
+def _ensure_pkg_db() -> Path:
+    from packages_db import init_db
+    p = _pkg_db_path()
+    init_db(p)
+    return p
+
+
+def _load_submissions_list() -> list[dict]:
+    """Return all submissions rows as list of dicts."""
+    path = _csv_path("submissions")
+    if not path or not path.exists():
+        return []
+    try:
+        return pd.read_csv(path).fillna("").to_dict(orient="records")
+    except Exception:
+        return []
+
+
+@app.route("/packages")
+def packages_page():
+    _ensure_pkg_db()
+    return render_template("packages.html")
+
+
+@app.route("/api/packages", methods=["GET"])
+def api_packages_list():
+    from packages_db import get_packages
+    db = _ensure_pkg_db()
+    return jsonify(get_packages(db))
+
+
+@app.route("/api/packages", methods=["POST"])
+def api_packages_create():
+    from packages_db import create_package
+    db   = _ensure_pkg_db()
+    data = request.get_json(force=True) or {}
+    name = str(data.get("name", "")).strip()
+    if not name:
+        return jsonify({"error": "Package name required"}), 400
+    user = _current_user()
+    pkg_id = create_package(
+        db,
+        name=name,
+        description=str(data.get("description", "")),
+        veracity_ref=str(data.get("veracity_ref", "")),
+        created_by=user,
+    )
+    return jsonify({"status": "ok", "id": pkg_id}), 201
+
+
+@app.route("/api/packages/<int:pkg_id>", methods=["GET"])
+def api_package_get(pkg_id):
+    from packages_db import get_package, get_package_documents, get_activity
+    db  = _ensure_pkg_db()
+    pkg = get_package(db, pkg_id)
+    if not pkg:
+        return jsonify({"error": "Package not found"}), 404
+    docs     = get_package_documents(db, pkg_id)
+    activity = get_activity(db, pkg_id)
+    return jsonify({"package": pkg, "documents": docs, "activity": activity})
+
+
+@app.route("/api/packages/<int:pkg_id>", methods=["PUT"])
+def api_package_update(pkg_id):
+    from packages_db import update_package
+    db   = _ensure_pkg_db()
+    data = request.get_json(force=True) or {}
+    update_package(db, pkg_id, data, updated_by=_current_user())
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/packages/<int:pkg_id>", methods=["DELETE"])
+def api_package_delete(pkg_id):
+    from packages_db import delete_package
+    db = _ensure_pkg_db()
+    delete_package(db, pkg_id)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/packages/<int:pkg_id>/documents", methods=["POST"])
+def api_package_add_doc(pkg_id):
+    from packages_db import add_document
+    db   = _ensure_pkg_db()
+    data = request.get_json(force=True) or {}
+    doc  = str(data.get("doc_number", "")).strip()
+    if not doc:
+        return jsonify({"error": "doc_number required"}), 400
+    inserted = add_document(
+        db, pkg_id, doc,
+        dnv_doc_number=str(data.get("dnv_doc_number", "")),
+        est_reply_date=str(data.get("est_reply_date", "")),
+        dnv_type=str(data.get("dnv_type", "")),
+        added_by=_current_user(),
+    )
+    return jsonify({"status": "ok", "inserted": inserted})
+
+
+@app.route("/api/packages/<int:pkg_id>/documents/<path:doc_number>",
+           methods=["PUT"])
+def api_package_update_doc(pkg_id, doc_number):
+    from packages_db import update_document
+    db   = _ensure_pkg_db()
+    data = request.get_json(force=True) or {}
+    update_document(db, pkg_id, doc_number, data)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/packages/<int:pkg_id>/documents/<path:doc_number>",
+           methods=["DELETE"])
+def api_package_remove_doc(pkg_id, doc_number):
+    from packages_db import remove_document
+    db = _ensure_pkg_db()
+    ok = remove_document(db, pkg_id, doc_number, removed_by=_current_user())
+    return jsonify({"status": "ok", "removed": ok})
+
+
+@app.route("/api/packages/<int:pkg_id>/export", methods=["GET"])
+def api_package_export(pkg_id):
+    """Export package in Veracity-mirrored format — JSON or CSV."""
+    from packages_db import export_package
+    fmt = request.args.get("format", "json").lower()
+    db  = _ensure_pkg_db()
+    subs = _load_submissions_list()
+    data = export_package(db, pkg_id, subs)
+    if not data:
+        return jsonify({"error": "Package not found"}), 404
+
+    if fmt == "csv":
+        import csv, io as _io
+        buf = _io.StringIO()
+        pkg = data["package"]
+        writer = csv.writer(buf)
+        writer.writerow([f"PACKAGE: {pkg['name']}",
+                         f"Status: {pkg['status']}",
+                         f"Veracity Ref: {pkg['veracity_ref']}",
+                         f"Exported: {data['exported_at']}"])
+        writer.writerow([])
+        writer.writerow(["Bastion Doc #", "DNV Doc #", "Title", "Type",
+                         "Revision", "Est. Reply Date", "Status",
+                         "Discipline", "Not Applicable"])
+        for d in data["documents"]:
+            writer.writerow([
+                d["doc_number"], d["dnv_doc_number"], d["title"],
+                d["type"], d["revision"], d["est_reply_date"],
+                d["status"], d["discipline"],
+                "Yes" if d["dnv_not_applicable"] else "No",
+            ])
+        csv_bytes = buf.getvalue().encode("utf-8")
+        pkg_name  = pkg["name"].replace(" ", "_")
+        filename  = f"Package_{pkg_name}_{_dt.date.today()}.csv"
+        return send_file(
+            io.BytesIO(csv_bytes),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=filename,
+        )
+
+    return jsonify(data)
+
+
+@app.route("/api/packages/by-doc/<path:doc_number>", methods=["GET"])
+def api_packages_by_doc(doc_number):
+    """Return all packages containing a given document number."""
+    from packages_db import get_document_packages
+    db = _ensure_pkg_db()
+    return jsonify(get_document_packages(db, doc_number))
+
+
+# ── Submission field migration (adds Veracity fields if missing) ──────────────
+def _maybe_add_veracity_cols(df: pd.DataFrame) -> pd.DataFrame:
+    """Add EstReplyDate and DNVNotApplicable columns if not present."""
+    for col in ("EstReplyDate", "DNVNotApplicable"):
+        if col not in df.columns:
+            df[col] = ""
+    return df
+
+
+# Patch api_csv_get to migrate veracity cols for submissions
+_orig_api_csv_get = app.view_functions.get("api_csv_get")
+
+
 # ── Risk thresholds used in impact route ──────────────────────────────────────
 try:
     from schedule_db import WATCH_BD, RISK_BD

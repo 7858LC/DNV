@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV BASTION · PACKAGES</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --surface3: #222e42;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #2563EB;
+  --blue-lt:  #60A5FA;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text);
+  font-family: var(--font-data); font-size: 13px; line-height: 1.4; overflow: hidden; }
+
+#shell { display: grid; grid-template-rows: 48px 40px 1fr; height: 100vh; overflow: hidden; }
+
+/* ── TOPBAR ── */
+#topbar { background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+#topbar .brand { font-family: var(--font-head); font-size: 18px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+#topbar .brand span { color: var(--muted); font-weight: 400; }
+#topbar .page-tag { font-family: var(--font-head); font-size: 13px; font-weight: 600;
+  letter-spacing: .1em; color: var(--blue-lt); text-transform: uppercase;
+  padding: 3px 10px; border: 1px solid rgba(96,165,250,.35); border-radius: 3px; }
+#topbar .spacer { flex: 1; }
+.btn { font-family: var(--font-head); font-size: 13px; font-weight: 700;
+  letter-spacing: .1em; padding: 5px 14px; border-radius: 3px; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap; background: none; border: 1px solid var(--muted);
+  color: var(--muted); transition: all .15s; }
+.btn:hover { border-color: var(--text); color: var(--text); }
+.btn.primary { border-color: var(--blue); color: var(--blue-lt); }
+.btn.primary:hover { background: rgba(37,99,235,.15); }
+.btn.green  { border-color: var(--green); color: var(--green); }
+.btn.green:hover { background: rgba(34,197,94,.12); }
+.btn.red    { border-color: var(--red); color: var(--red); }
+.btn.red:hover { background: rgba(239,68,68,.12); }
+
+/* ── FILTER BAR ── */
+#filterbar { background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 10px; }
+.filter-input { font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 10px; border-radius: 3px; width: 200px; outline: none; }
+.filter-input:focus { border-color: var(--blue); }
+.filter-select { font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 3px; outline: none; cursor: pointer; }
+.filter-sep { flex: 1; }
+
+/* ── MAIN 3-COLUMN LAYOUT ── */
+#main { display: grid; grid-template-columns: 280px 1fr 320px; overflow: hidden; }
+
+/* ── PACKAGE LIST (left) ── */
+#pkg-list-pane { border-right: 1px solid var(--border); overflow-y: auto;
+  display: flex; flex-direction: column; }
+.pkg-list-header { padding: 12px 14px 8px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-head); font-size: 11px; font-weight: 600;
+  letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.pkg-item { padding: 10px 14px; border-bottom: 1px solid rgba(30,45,69,.5);
+  cursor: pointer; transition: background .1s; }
+.pkg-item:hover { background: var(--surface2); }
+.pkg-item.selected { background: rgba(37,99,235,.1); border-left: 3px solid var(--blue); }
+.pkg-item .pkg-name { font-family: var(--font-head); font-size: 14px; font-weight: 600;
+  color: var(--text); margin-bottom: 3px; }
+.pkg-item .pkg-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }
+.pkg-empty { padding: 32px 14px; text-align: center; color: var(--muted);
+  font-size: 12px; }
+
+/* status badge */
+.pkg-badge { font-family: var(--font-head); font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; padding: 1px 7px; border-radius: 3px; display: inline-block; }
+.pkg-badge.Draft              { background:rgba(107,114,128,.15); color:var(--muted); }
+.pkg-badge.Ready              { background:rgba(37,99,235,.15);   color:var(--blue-lt); }
+.pkg-badge.Submitted          { background:rgba(245,158,11,.15);  color:var(--amber); }
+.pkg-badge.Under-Review       { background:rgba(245,158,11,.15);  color:var(--amber); }
+.pkg-badge.Approved           { background:rgba(34,197,94,.12);   color:var(--green); }
+.pkg-badge.Approved-Comments  { background:rgba(34,197,94,.12);   color:var(--green); }
+.pkg-badge.Rejected           { background:rgba(239,68,68,.15);   color:var(--red); }
+.pkg-badge.On-Hold            { background:rgba(107,114,128,.15); color:var(--muted); }
+
+/* ── PACKAGE DETAIL (centre) ── */
+#pkg-detail-pane { overflow-y: auto; display: flex; flex-direction: column; }
+.detail-empty { flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-family: var(--font-head); font-size: 15px; opacity: .4; }
+
+.pkg-detail-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; gap: 12px; }
+.pkg-detail-header .pkg-title { flex: 1; }
+.pkg-detail-header .pkg-title h2 { font-family: var(--font-head); font-size: 20px;
+  font-weight: 700; letter-spacing: .08em; }
+.pkg-detail-header .pkg-title .pkg-sub { font-size: 11px; color: var(--muted);
+  margin-top: 3px; }
+.pkg-detail-header .pkg-actions { display: flex; gap: 6px; flex-wrap: wrap;
+  align-items: flex-start; }
+
+/* meta row */
+.pkg-meta-row { padding: 10px 18px; background: var(--surface2);
+  border-bottom: 1px solid var(--border); display: flex; gap: 24px; flex-wrap: wrap; }
+.pkg-meta-item { font-size: 11px; }
+.pkg-meta-item .lbl { color: var(--muted); display: block; margin-bottom: 2px; }
+.pkg-meta-item .val { color: var(--text); font-weight: 500; }
+
+/* doc table */
+.doc-table-wrap { flex: 1; overflow-y: auto; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.doc-table thead tr { background: var(--surface); position: sticky; top: 0; z-index: 5; }
+.doc-table th { padding: 7px 10px; text-align: left; font-family: var(--font-head);
+  font-size: 10px; font-weight: 600; letter-spacing: .08em; color: var(--muted);
+  text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.doc-table td { padding: 7px 10px; border-bottom: 1px solid rgba(30,45,69,.5);
+  vertical-align: middle; }
+.doc-table tbody tr:hover { background: rgba(26,34,52,.6); }
+.doc-num  { font-family: var(--font-data); font-size: 11px; color: var(--blue-lt); }
+.dnv-num  { font-family: var(--font-data); font-size: 11px; color: var(--amber); }
+.doc-title { max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-size: 11px; }
+.sub-status { font-family: var(--font-head); font-size: 10px; font-weight: 600;
+  letter-spacing: .06em; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+.sub-status.New              { background:rgba(107,114,128,.15); color:var(--muted); }
+.sub-status.Submitted-to-DNV { background:rgba(245,158,11,.15);  color:var(--amber); }
+.sub-status.Closed           { background:rgba(34,197,94,.12);   color:var(--green); }
+.na-badge { font-size: 10px; color: var(--muted); background: rgba(107,114,128,.1);
+  padding: 1px 5px; border-radius: 3px; }
+
+/* inline editable cell */
+.editable { cursor: pointer; border-bottom: 1px dashed rgba(96,165,250,.3); }
+.editable:hover { border-color: var(--blue-lt); color: var(--blue-lt); }
+input.cell-edit { font-family: var(--font-data); font-size: 11px; background: var(--surface2);
+  border: 1px solid var(--blue); color: var(--text); padding: 2px 5px;
+  border-radius: 2px; width: 100%; outline: none; }
+
+/* add doc row */
+.add-doc-row { display: flex; gap: 6px; padding: 10px 18px;
+  border-top: 1px solid var(--border); background: var(--surface); }
+.add-doc-row input { flex: 1; font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 5px 10px; border-radius: 3px; outline: none; }
+.add-doc-row input:focus { border-color: var(--blue); }
+.add-doc-row select { font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 5px 8px; border-radius: 3px; outline: none; }
+
+/* ── VERACITY SYNC PANEL (right) ── */
+#sync-pane { background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden; }
+.sync-header { padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-head); font-size: 12px; font-weight: 600;
+  letter-spacing: .1em; color: var(--muted); text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px; }
+.sync-header .dnv-dot { width: 8px; height: 8px; border-radius: 50%;
+  background: #00A3E0; flex-shrink: 0; }
+.sync-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+.sync-doc { padding: 10px 0; border-bottom: 1px solid rgba(30,45,69,.5); }
+.sync-doc:last-child { border-bottom: none; }
+.sync-doc .sd-bastion { font-family: var(--font-data); font-size: 11px;
+  color: var(--blue-lt); margin-bottom: 2px; }
+.sync-doc .sd-dnv { font-family: var(--font-data); font-size: 11px;
+  color: var(--amber); margin-bottom: 4px; }
+.sync-doc .sd-title { font-size: 11px; color: var(--text); margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sync-row { display: flex; justify-content: space-between; font-size: 10px;
+  margin-bottom: 2px; }
+.sync-row .sl { color: var(--muted); }
+.sync-row .sv { color: var(--text); }
+.sync-row .sv.mismatch { color: var(--amber); }
+.sync-row .sv.ok       { color: var(--green); }
+.sync-empty { color: var(--muted); font-size: 12px; text-align: center;
+  padding: 32px 14px; }
+
+/* ── MODALS ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: none; align-items: center; justify-content: center; z-index: 100; }
+.modal-box { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 24px 28px; width: 480px; max-width: 95vw; }
+.modal-box h3 { font-family: var(--font-head); font-size: 18px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 16px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-size: 11px; color: var(--muted);
+  margin-bottom: 4px; text-transform: uppercase; letter-spacing: .06em; }
+.form-row input, .form-row select, .form-row textarea {
+  width: 100%; font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 6px 10px; border-radius: 3px; outline: none; }
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+  border-color: var(--blue); }
+.form-row textarea { resize: vertical; min-height: 60px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.notice { padding: 8px 12px; border-radius: 4px; font-size: 12px; margin-top: 10px; }
+.notice.info { background: rgba(96,165,250,.1); color: var(--blue-lt); }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="brand">DNV BASTION <span>PORTAL</span></div>
+    <div class="page-tag">PACKAGES</div>
+    <div class="spacer"></div>
+    <a href="/" class="btn">← Dashboard</a>
+    <a href="/coordinator" class="btn">Coordinator</a>
+    <a href="/submissions" class="btn">Submissions</a>
+    <button class="btn primary" onclick="openNewPackage()">+ NEW PACKAGE</button>
+    <div id="user-chip"></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div id="filterbar">
+    <input id="search" class="filter-input" placeholder="Search packages…" oninput="renderPkgList()">
+    <select id="sel-status" class="filter-select" onchange="renderPkgList()">
+      <option value="">All Statuses</option>
+      <option>Draft</option>
+      <option>Ready to Submit</option>
+      <option>Submitted to DNV</option>
+      <option>Under DNV Review</option>
+      <option>Approved</option>
+      <option>Approved with Comments</option>
+      <option>Rejected</option>
+      <option>On Hold</option>
+    </select>
+    <div class="filter-sep"></div>
+    <span id="pkg-count" style="font-size:11px;color:var(--muted)">— packages</span>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- LEFT: package list -->
+    <div id="pkg-list-pane">
+      <div class="pkg-list-header">Submission Packages</div>
+      <div id="pkg-list"></div>
+    </div>
+
+    <!-- CENTRE: package detail -->
+    <div id="pkg-detail-pane">
+      <div class="detail-empty" id="detail-empty">Select a package</div>
+    </div>
+
+    <!-- RIGHT: Veracity sync -->
+    <div id="sync-pane">
+      <div class="sync-header">
+        <div class="dnv-dot"></div>
+        DNV VERACITY SYNC
+      </div>
+      <div class="sync-body" id="sync-body">
+        <div class="sync-empty">Select a package to see<br>Veracity field comparison</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- NEW PACKAGE MODAL -->
+<div class="modal-overlay" id="new-pkg-overlay" onclick="if(event.target===this)closeNewPackage()">
+  <div class="modal-box">
+    <h3>New Package</h3>
+    <div class="form-row">
+      <label>Package Name *</label>
+      <input id="np-name" placeholder="e.g. AIP DOCUMENT PACKAGE">
+    </div>
+    <div class="form-row">
+      <label>Description</label>
+      <textarea id="np-desc" placeholder="What this package contains / purpose"></textarea>
+    </div>
+    <div class="form-row">
+      <label>DNV Veracity Reference (if known)</label>
+      <input id="np-vref" placeholder="Veracity package / project reference">
+    </div>
+    <div class="notice info">
+      Documents are added to the package after creation.
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeNewPackage()">Cancel</button>
+      <button class="btn primary" onclick="submitNewPackage()">Create Package</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PACKAGE MODAL -->
+<div class="modal-overlay" id="edit-pkg-overlay" onclick="if(event.target===this)closeEditPackage()">
+  <div class="modal-box">
+    <h3>Edit Package</h3>
+    <input type="hidden" id="ep-id">
+    <div class="form-row">
+      <label>Package Name</label>
+      <input id="ep-name">
+    </div>
+    <div class="form-row">
+      <label>Status</label>
+      <select id="ep-status">
+        <option>Draft</option>
+        <option>Ready to Submit</option>
+        <option>Submitted to DNV</option>
+        <option>Under DNV Review</option>
+        <option>Approved</option>
+        <option>Approved with Comments</option>
+        <option>Rejected</option>
+        <option>On Hold</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>DNV Veracity Reference</label>
+      <input id="ep-vref">
+    </div>
+    <div class="form-row">
+      <label>Veracity URL</label>
+      <input id="ep-vurl" placeholder="https://veracity.dnv.com/…">
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea id="ep-notes"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn red" onclick="deletePackage()">Delete</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeEditPackage()">Cancel</button>
+      <button class="btn primary" onclick="submitEditPackage()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   PACKAGES PAGE
+═══════════════════════════════════════════════════════ */
+
+let _packages   = [];
+let _selectedId = null;
+let _selectedPkg = null;  // full detail {package, documents, activity}
+let _submissions = [];    // all submission rows for lookup
+
+// ── Boot ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([loadPackages(), loadSubmissions()]);
+});
+
+async function loadPackages() {
+  try {
+    const r = await fetch('/api/packages');
+    _packages = await r.json();
+    renderPkgList();
+  } catch(e) { console.error('loadPackages', e); }
+}
+
+async function loadSubmissions() {
+  try {
+    const r = await fetch('/api/csv/submissions');
+    _submissions = await r.json();
+  } catch(e) { _submissions = []; }
+}
+
+// ── Package list ──────────────────────────────────────
+function renderPkgList() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const status = document.getElementById('sel-status').value;
+  const filtered = _packages.filter(p => {
+    if (search && !(p.name||'').toLowerCase().includes(search)) return false;
+    if (status && p.status !== status) return false;
+    return true;
+  });
+  document.getElementById('pkg-count').textContent = `${filtered.length} package${filtered.length!==1?'s':''}`;
+  const el = document.getElementById('pkg-list');
+  if (!filtered.length) {
+    el.innerHTML = '<div class="pkg-empty">No packages yet.<br>Click + NEW PACKAGE to start.</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(p => {
+    const cls = p.status.replace(/\s+/g,'-');
+    const sel = _selectedId === p.id ? 'selected' : '';
+    return `<div class="pkg-item ${sel}" onclick="selectPackage(${p.id})">
+      <div class="pkg-name">${esc(p.name)}</div>
+      <div class="pkg-meta">
+        <span class="pkg-badge ${cls}">${esc(p.status)}</span>
+        <span>${p.doc_count} doc${p.doc_count!==1?'s':''}</span>
+        ${p.veracity_ref ? `<span style="color:var(--amber)">${esc(p.veracity_ref)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Select package ────────────────────────────────────
+async function selectPackage(id) {
+  _selectedId = id;
+  renderPkgList();
+  try {
+    const r = await fetch(`/api/packages/${id}`);
+    _selectedPkg = await r.json();
+    renderDetail();
+    renderSync();
+  } catch(e) { console.error('selectPackage', e); }
+}
+
+// ── Centre detail ─────────────────────────────────────
+function renderDetail() {
+  const pane = document.getElementById('pkg-detail-pane');
+  document.getElementById('detail-empty').style.display = 'none';
+  const { package: pkg, documents } = _selectedPkg;
+  const cls   = pkg.status.replace(/\s+/g,'-');
+  const subIdx = {};
+  _submissions.forEach(s => { subIdx[String(s.DocumentNumber||'').trim()] = s; });
+
+  const docsHtml = documents.length === 0
+    ? `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--muted)">
+        No documents added yet. Use the field below to add submissions.
+       </td></tr>`
+    : documents.map(d => {
+        const sub  = subIdx[d.doc_number] || {};
+        const title = sub.DocumentTitle || '—';
+        const stcls = (sub.Status||'').replace(/\s+/g,'-');
+        const na    = d.dnv_not_applicable ? '<span class="na-badge">N/A</span>' : '';
+        return `<tr>
+          <td class="doc-num">${esc(d.doc_number)}</td>
+          <td class="dnv-num editable" title="Click to edit DNV doc number"
+              onclick="editCell(this,${pkg.id},'${esc(d.doc_number)}','dnv_doc_number')"
+              >${esc(d.dnv_doc_number)||'<span style="color:var(--muted)">—</span>'}</td>
+          <td class="doc-title" title="${esc(title)}">${esc(title)}</td>
+          <td style="font-size:11px">${esc(sub.Revision||'—')}</td>
+          <td class="editable" title="Click to edit est. reply date"
+              onclick="editCell(this,${pkg.id},'${esc(d.doc_number)}','est_reply_date')"
+              style="font-size:11px">${esc(d.est_reply_date)||'<span style="color:var(--muted)">—</span>'}</td>
+          <td><span class="sub-status ${stcls}">${esc(sub.Status||'—')}</span> ${na}</td>
+          <td>
+            <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px"
+              title="Remove from package"
+              onclick="removeDoc(${pkg.id},'${esc(d.doc_number)}')">✕</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+  pane.innerHTML = `
+    <div class="pkg-detail-header">
+      <div class="pkg-title">
+        <h2>${esc(pkg.name)}</h2>
+        <div class="pkg-sub">
+          <span class="pkg-badge ${cls}">${esc(pkg.status)}</span>
+          ${pkg.veracity_ref ? `&nbsp;· Veracity: <span style="color:var(--amber)">${esc(pkg.veracity_ref)}</span>` : ''}
+          ${pkg.veracity_url ? `&nbsp;<a href="${esc(pkg.veracity_url)}" target="_blank" style="color:var(--blue-lt);font-size:11px">↗ Open in Veracity</a>` : ''}
+        </div>
+      </div>
+      <div class="pkg-actions">
+        <button class="btn" onclick="openEditPackage()">Edit</button>
+        <button class="btn green" onclick="exportPackage(${pkg.id},'csv')">↓ Export CSV</button>
+        <button class="btn primary" onclick="exportPackage(${pkg.id},'json')">↓ JSON</button>
+      </div>
+    </div>
+
+    <div class="pkg-meta-row">
+      <div class="pkg-meta-item">
+        <span class="lbl">Created by</span>
+        <span class="val">${esc(pkg.created_by||'—')}</span>
+      </div>
+      <div class="pkg-meta-item">
+        <span class="lbl">Created</span>
+        <span class="val">${fmtDate(pkg.created_at)}</span>
+      </div>
+      <div class="pkg-meta-item">
+        <span class="lbl">Submitted</span>
+        <span class="val">${pkg.submitted_at ? fmtDate(pkg.submitted_at) : '—'}</span>
+      </div>
+      <div class="pkg-meta-item">
+        <span class="lbl">Documents</span>
+        <span class="val">${documents.length}</span>
+      </div>
+      ${pkg.description ? `<div class="pkg-meta-item" style="flex:1">
+        <span class="lbl">Description</span>
+        <span class="val" style="white-space:normal">${esc(pkg.description)}</span>
+      </div>` : ''}
+    </div>
+
+    <div class="doc-table-wrap">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Bastion Doc #</th>
+            <th>DNV Doc # (Veracity)</th>
+            <th>Title</th>
+            <th>Rev</th>
+            <th>Est. Reply</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${docsHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="add-doc-row">
+      <input id="add-doc-num" placeholder="Bastion doc number (e.g. BT3345_0001)"
+             onkeydown="if(event.key==='Enter')addDocToPackage(${pkg.id})">
+      <input id="add-dnv-num" placeholder="DNV doc # (D000004xxx)" style="width:160px">
+      <input id="add-reply"   placeholder="Est. reply date" type="date" style="width:140px">
+      <button class="btn primary" onclick="addDocToPackage(${pkg.id})">+ Add</button>
+    </div>
+  `;
+}
+
+// ── Veracity sync panel ───────────────────────────────
+function renderSync() {
+  const { package: pkg, documents } = _selectedPkg;
+  const body  = document.getElementById('sync-body');
+  const subIdx = {};
+  _submissions.forEach(s => { subIdx[String(s.DocumentNumber||'').trim()] = s; });
+
+  if (!documents.length) {
+    body.innerHTML = '<div class="sync-empty">No documents in package</div>';
+    return;
+  }
+
+  body.innerHTML = documents.map(d => {
+    const sub = subIdx[d.doc_number] || {};
+    const hasVeracity = !!d.dnv_doc_number;
+    const hasReply    = !!d.est_reply_date;
+
+    // Status comparison: our status vs expected Veracity state
+    const ourStatus    = sub.Status || '—';
+    const veracityStatus = sub.VeracityRef ? 'On hold' : '—';
+    const statusMatch  = hasVeracity;
+
+    return `<div class="sync-doc">
+      <div class="sd-bastion">↑ ${esc(d.doc_number)}</div>
+      ${hasVeracity
+        ? `<div class="sd-dnv">⬡ ${esc(d.dnv_doc_number)}</div>`
+        : `<div style="font-size:10px;color:var(--red);margin-bottom:4px">⚠ No DNV doc number assigned</div>`}
+      <div class="sd-title">${esc(sub.DocumentTitle||'Untitled')}</div>
+      <div class="sync-row">
+        <span class="sl">Our status</span>
+        <span class="sv">${esc(ourStatus)}</span>
+      </div>
+      <div class="sync-row">
+        <span class="sl">Veracity ref</span>
+        <span class="sv ${hasVeracity?'ok':'mismatch'}">${hasVeracity ? esc(d.dnv_doc_number) : 'Not assigned'}</span>
+      </div>
+      <div class="sync-row">
+        <span class="sl">Est. reply</span>
+        <span class="sv ${hasReply?'':'mismatch'}">${hasReply ? fmtDate(d.est_reply_date) : 'Not set'}</span>
+      </div>
+      <div class="sync-row">
+        <span class="sl">Revision</span>
+        <span class="sv">${esc(sub.Revision||'—')}</span>
+      </div>
+      ${sub.DNVNotApplicable==='Yes'
+        ? '<div class="sync-row"><span class="sl">N/A for DNV</span><span class="sv mismatch">Yes</span></div>'
+        : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Add / remove documents ────────────────────────────
+async function addDocToPackage(pkgId) {
+  const doc = document.getElementById('add-doc-num').value.trim();
+  if (!doc) { document.getElementById('add-doc-num').focus(); return; }
+  const dnv   = document.getElementById('add-dnv-num').value.trim();
+  const reply = document.getElementById('add-reply').value.trim();
+  const r = await fetch(`/api/packages/${pkgId}/documents`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ doc_number: doc, dnv_doc_number: dnv, est_reply_date: reply })
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed to add document'); return; }
+  if (!d.inserted) { alert(`${doc} is already in this package`); return; }
+  document.getElementById('add-doc-num').value = '';
+  document.getElementById('add-dnv-num').value = '';
+  document.getElementById('add-reply').value   = '';
+  await refreshSelected();
+}
+
+async function removeDoc(pkgId, docNum) {
+  if (!confirm(`Remove ${docNum} from this package?`)) return;
+  await fetch(`/api/packages/${pkgId}/documents/${encodeURIComponent(docNum)}`,
+    { method: 'DELETE' });
+  await refreshSelected();
+}
+
+// ── Inline cell editing ───────────────────────────────
+function editCell(td, pkgId, docNum, field) {
+  const current = td.textContent.trim() === '—' ? '' : td.textContent.trim();
+  const inp = document.createElement('input');
+  inp.className = 'cell-edit';
+  inp.value = current;
+  td.innerHTML = '';
+  td.appendChild(inp);
+  inp.focus();
+  const save = async () => {
+    const val = inp.value.trim();
+    await fetch(`/api/packages/${pkgId}/documents/${encodeURIComponent(docNum)}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ [field]: val })
+    });
+    await refreshSelected();
+  };
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', e => { if (e.key==='Enter') inp.blur(); });
+}
+
+// ── Export ────────────────────────────────────────────
+function exportPackage(pkgId, fmt) {
+  window.location.href = `/api/packages/${pkgId}/export?format=${fmt}`;
+}
+
+// ── Refresh ───────────────────────────────────────────
+async function refreshSelected() {
+  await loadPackages();
+  if (_selectedId) await selectPackage(_selectedId);
+}
+
+// ── New package modal ─────────────────────────────────
+function openNewPackage() {
+  document.getElementById('new-pkg-overlay').style.display = 'flex';
+  document.getElementById('np-name').focus();
+}
+function closeNewPackage() {
+  document.getElementById('new-pkg-overlay').style.display = 'none';
+  ['np-name','np-desc','np-vref'].forEach(id => document.getElementById(id).value = '');
+}
+async function submitNewPackage() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) { document.getElementById('np-name').focus(); return; }
+  const r = await fetch('/api/packages', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name,
+      description: document.getElementById('np-desc').value.trim(),
+      veracity_ref: document.getElementById('np-vref').value.trim(),
+    })
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed'); return; }
+  closeNewPackage();
+  await loadPackages();
+  selectPackage(d.id);
+}
+
+// ── Edit package modal ────────────────────────────────
+function openEditPackage() {
+  if (!_selectedPkg) return;
+  const pkg = _selectedPkg.package;
+  document.getElementById('ep-id').value     = pkg.id;
+  document.getElementById('ep-name').value   = pkg.name;
+  document.getElementById('ep-status').value = pkg.status;
+  document.getElementById('ep-vref').value   = pkg.veracity_ref || '';
+  document.getElementById('ep-vurl').value   = pkg.veracity_url || '';
+  document.getElementById('ep-notes').value  = pkg.notes || '';
+  document.getElementById('edit-pkg-overlay').style.display = 'flex';
+}
+function closeEditPackage() {
+  document.getElementById('edit-pkg-overlay').style.display = 'none';
+}
+async function submitEditPackage() {
+  const id = parseInt(document.getElementById('ep-id').value);
+  const r  = await fetch(`/api/packages/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name:         document.getElementById('ep-name').value.trim(),
+      status:       document.getElementById('ep-status').value,
+      veracity_ref: document.getElementById('ep-vref').value.trim(),
+      veracity_url: document.getElementById('ep-vurl').value.trim(),
+      notes:        document.getElementById('ep-notes').value.trim(),
+    })
+  });
+  if (!r.ok) { alert('Save failed'); return; }
+  closeEditPackage();
+  await refreshSelected();
+}
+async function deletePackage() {
+  const id   = parseInt(document.getElementById('ep-id').value);
+  const name = document.getElementById('ep-name').value;
+  if (!confirm(`Delete package "${name}"? This cannot be undone.`)) return;
+  await fetch(`/api/packages/${id}`, { method: 'DELETE' });
+  closeEditPackage();
+  _selectedId  = null;
+  _selectedPkg = null;
+  document.getElementById('pkg-detail-pane').innerHTML =
+    '<div class="detail-empty" id="detail-empty">Select a package</div>';
+  document.getElementById('sync-body').innerHTML =
+    '<div class="sync-empty">Select a package to see<br>Veracity field comparison</div>';
+  await loadPackages();
+}
+
+// ── Helpers ───────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(String(s).length === 10 ? s + 'T00:00:00Z' : s);
+  if (isNaN(d)) return String(s).slice(0,10);
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'});
+}
+</script>
+</body>
+</html>
