@@ -150,12 +150,25 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
   border-radius: 2px; width: 100%; outline: none; }
 
 /* add doc row */
-.add-doc-row { display: flex; gap: 6px; padding: 10px 18px;
-  border-top: 1px solid var(--border); background: var(--surface); }
+.add-doc-row { display: flex; align-items: center; gap: 6px; padding: 10px 18px;
+  border-top: 2px solid var(--amber); background: var(--surface); }
 .add-doc-row input { flex: 1; font-family: var(--font-data); font-size: 12px;
   background: var(--surface2); border: 1px solid var(--border); color: var(--text);
   padding: 5px 10px; border-radius: 3px; outline: none; }
 .add-doc-row input:focus { border-color: var(--blue); }
+
+/* pulse highlight for add row after package creation */
+@keyframes pulse-row {
+  0%,100% { background: var(--surface); }
+  40%      { background: rgba(251,191,36,0.15); }
+}
+.add-doc-row.pulse { animation: pulse-row 0.7s ease 3; }
+
+/* bounce arrow in empty state */
+@keyframes bounce {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
 .add-doc-row select { font-family: var(--font-data); font-size: 12px;
   background: var(--surface2); border: 1px solid var(--border); color: var(--text);
   padding: 5px 8px; border-radius: 3px; outline: none; }
@@ -452,8 +465,13 @@ function renderDetail() {
   _submissions.forEach(s => { subIdx[String(s.DocumentNumber||'').trim()] = s; });
 
   const docsHtml = documents.length === 0
-    ? `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--muted)">
-        No documents added yet. Use the field below to add submissions.
+    ? `<tr><td colspan="7" style="padding:32px 24px;text-align:center">
+        <div style="font-size:22px;margin-bottom:8px">📂</div>
+        <div style="color:var(--fg);font-size:14px;font-weight:600;margin-bottom:6px">No documents yet</div>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:14px">
+          Add submissions below — type a Bastion doc number and press Enter or click + Add
+        </div>
+        <div style="font-size:20px;color:var(--amber);animation:bounce 1.2s infinite">↓</div>
        </td></tr>`
     : documents.map(d => {
         const sub  = subIdx[d.doc_number] || {};
@@ -537,7 +555,10 @@ function renderDetail() {
       </table>
     </div>
 
-    <div class="add-doc-row">
+    <div class="add-doc-row" id="add-doc-row">
+      <span style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap;align-self:center">
+        + ADD DOC
+      </span>
       <input id="add-doc-num" placeholder="Bastion doc number (e.g. BT3345_0001)"
              onkeydown="if(event.key==='Enter')addDocToPackage(${pkg.id})">
       <input id="add-dnv-num" placeholder="DNV doc # (D000004xxx)" style="width:160px">
@@ -770,7 +791,19 @@ async function submitNewPackage() {
   if (!r.ok) { alert(d.error || 'Failed'); return; }
   closeNewPackage();
   await loadPackages();
-  selectPackage(d.id);
+  await selectPackage(d.id);
+  // Scroll to and pulse the add-doc row so it's impossible to miss
+  setTimeout(() => {
+    const row = document.getElementById('add-doc-row');
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.remove('pulse');
+      void row.offsetWidth;           // force reflow to restart animation
+      row.classList.add('pulse');
+      setTimeout(() => row.classList.remove('pulse'), 2200);
+      document.getElementById('add-doc-num')?.focus();
+    }
+  }, 300);
 }
 
 // ── Edit package modal ────────────────────────────────
