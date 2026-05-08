@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentinel — Communications Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0A0F1E;
+  --surface:    #111827;
+  --surface2:   #1A2234;
+  --surface3:   #222e42;
+  --border:     #1E2D45;
+  --text:       #E8ECF0;
+  --muted:      #6B7280;
+  --red:        #EF4444;
+  --amber:      #F59E0B;
+  --green:      #22C55E;
+  --blue:       #3B82F6;
+  --purple:     #8B5CF6;
+  --dnv-blue:   #003591;
+  --closed:     #374151;
+  --font-head:  'Barlow Condensed', sans-serif;
+  --font-data:  'IBM Plex Mono', monospace;
+
+  --lane-exec:     #F59E0B;
+  --lane-tech:     #3B82F6;
+  --lane-contract: #8B5CF6;
+  --lane-cost:     #22C55E;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+#shell {
+  display: grid;
+  grid-template-rows: 48px 56px 40px 1fr 32px;
+  height: 100vh;
+}
+
+/* ── TOP BAR ─────────────────────────────────────────── */
+#topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+.brand {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text);
+  text-decoration: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.brand span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0;
+  font-family: var(--font-data);
+}
+.nav-links {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.nav-btn {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-btn:hover { color: var(--text); border-color: var(--blue); }
+.nav-btn.active { color: var(--blue); border-color: var(--blue); background: rgba(59,130,246,0.08); }
+
+/* ── KPI BAR ─────────────────────────────────────────── */
+#kpibar {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 0;
+  overflow-x: auto;
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 20px 8px 0;
+  margin-right: 20px;
+  border-right: 1px solid var(--border);
+  min-width: 80px;
+  gap: 2px;
+}
+.kpi:last-child { border-right: none; }
+.kpi-val {
+  font-family: var(--font-head);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+.kpi-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kpi-val.red    { color: var(--red); }
+.kpi-val.amber  { color: var(--amber); }
+.kpi-val.green  { color: var(--green); }
+.kpi-val.blue   { color: var(--blue); }
+
+.lane-kpis {
+  display: flex;
+  gap: 16px;
+  margin-left: 8px;
+}
+.lane-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.lane-chip-val {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 700;
+}
+.lane-chip-label {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── TAB BAR ─────────────────────────────────────────── */
+#tabbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 4px;
+}
+.tab {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 0 14px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+.tab-action-btn {
+  margin-left: auto;
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: none;
+  background: var(--blue);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.tab-action-btn:hover { opacity: 0.85; }
+
+/* ── MAIN CONTENT ────────────────────────────────────── */
+#content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-panel { display: none; height: 100%; flex-direction: column; overflow: hidden; }
+.tab-panel.active { display: flex; }
+
+/* ── FILTER BAR ─────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+}
+.ftab {
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.ftab:hover { color: var(--text); }
+.ftab.active { color: var(--text); border-color: var(--blue); background: rgba(59,130,246,0.1); }
+.ftab.exec.active   { color: var(--lane-exec);     border-color: var(--lane-exec);     background: rgba(245,158,11,0.1); }
+.ftab.tech.active   { color: var(--lane-tech);     border-color: var(--lane-tech);     background: rgba(59,130,246,0.1); }
+.ftab.contract.active { color: var(--lane-contract); border-color: var(--lane-contract); background: rgba(139,92,246,0.1); }
+.ftab.cost.active   { color: var(--lane-cost);     border-color: var(--lane-cost);     background: rgba(34,197,94,0.1); }
+
+.filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+.filter-select {
+  font-family: var(--font-data);
+  font-size: 11px;
+  background: var(--surface3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.filter-input {
+  font-family: var(--font-data);
+  font-size: 11px;
+  background: var(--surface3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 8px;
+  width: 180px;
+}
+.filter-input::placeholder { color: var(--muted); }
+.filter-input:focus, .filter-select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* ── TABLE ───────────────────────────────────────────── */
+.table-wrap {
+  flex: 1;
+  overflow-y: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead {
+  position: sticky;
+  top: 0;
+  background: var(--surface2);
+  z-index: 10;
+}
+thead th {
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+tbody tr:hover { background: var(--surface2); }
+tbody tr.expanded { background: var(--surface2); }
+tbody td {
+  padding: 8px 12px;
+  vertical-align: top;
+  font-size: 12px;
+}
+
+/* expanded detail row */
+.detail-row { display: none; }
+.detail-row.open { display: table-row; }
+.detail-row td {
+  padding: 0;
+  cursor: default;
+}
+.detail-panel {
+  background: var(--surface3);
+  border-bottom: 2px solid var(--blue);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.detail-section-title {
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.detail-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.detail-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.detail-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--surface);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+.detail-panel-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  grid-column: 1 / -1;
+}
+.btn-sm {
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.btn-sm:hover { color: var(--text); border-color: var(--blue); }
+.btn-sm.danger:hover { color: var(--red); border-color: var(--red); }
+
+/* ── BADGES ──────────────────────────────────────────── */
+.lane-badge {
+  display: inline-block;
+  font-family: var(--font-head);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.lane-badge.executive   { background: rgba(245,158,11,0.15); color: var(--lane-exec); border: 1px solid rgba(245,158,11,0.3); }
+.lane-badge.technical   { background: rgba(59,130,246,0.15);  color: var(--lane-tech); border: 1px solid rgba(59,130,246,0.3); }
+.lane-badge.contractual { background: rgba(139,92,246,0.15); color: var(--lane-contract); border: 1px solid rgba(139,92,246,0.3); }
+.lane-badge.cost        { background: rgba(34,197,94,0.15);  color: var(--lane-cost); border: 1px solid rgba(34,197,94,0.3); }
+
+.source-badge {
+  display: inline-block;
+  font-family: var(--font-head);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--surface3);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.action-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  background: var(--surface3);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.action-count.has-open { background: rgba(59,130,246,0.15); color: var(--blue); border-color: rgba(59,130,246,0.4); }
+
+.rag-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rag-dot.red    { background: var(--red); }
+.rag-dot.amber  { background: var(--amber); }
+.rag-dot.green  { background: var(--green); }
+.rag-dot.closed { background: var(--closed); }
+
+.status-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-family: var(--font-head);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+.status-badge.open        { background: rgba(59,130,246,0.1); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+.status-badge.in_progress { background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+.status-badge.closed      { background: var(--closed); color: var(--muted); border: 1px solid var(--border); }
+.status-badge.escalated   { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+/* ── FOOTER ──────────────────────────────────────────── */
+#footer {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  font-size: 10px;
+  color: var(--muted);
+}
+#footer .count { color: var(--text); }
+
+/* ── MODAL ───────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 620px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.modal-title {
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.modal-close:hover { color: var(--text); background: var(--surface2); }
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Form elements */
+.form-row {
+  display: grid;
+  gap: 12px;
+}
+.form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.form-label .req { color: var(--red); margin-left: 2px; }
+.form-control {
+  font-family: var(--font-data);
+  font-size: 12px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  width: 100%;
+}
+.form-control:focus { outline: none; border-color: var(--blue); }
+textarea.form-control { resize: vertical; min-height: 64px; }
+select.form-control { cursor: pointer; }
+
+.inline-actions-section {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.inline-actions-header {
+  background: var(--surface2);
+  padding: 8px 12px;
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.inline-actions-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inline-action-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 100px 24px;
+  gap: 6px;
+  align-items: center;
+}
+.btn-icon {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, border-color 0.12s;
+}
+.btn-icon:hover { color: var(--red); border-color: var(--red); }
+.btn-add-row {
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 600;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 10px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.btn-add-row:hover { color: var(--blue); border-color: var(--blue); }
+
+.btn-primary {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 7px 16px;
+  border-radius: 4px;
+  border: none;
+  background: var(--blue);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-cancel {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.btn-cancel:hover { color: var(--text); }
+
+/* ── EMPTY STATE ─────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--muted);
+}
+.empty-state-title {
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<!-- ── TOP BAR ─────────────────────────────────────────── -->
+<div id="topbar">
+  <a href="/" class="brand">SENTINEL <span>001 / DNV COORDINATOR</span></a>
+  <div class="nav-links">
+    <a href="/"           class="nav-btn">Dashboard</a>
+    <a href="/coordinator" class="nav-btn">Coordinator</a>
+    <a href="/docreq"     class="nav-btn">DocReq</a>
+    <a href="/kanban"     class="nav-btn">Kanban</a>
+    <a href="/comms"      class="nav-btn active">Comms</a>
+    <a href="/exec"       class="nav-btn">Exec</a>
+  </div>
+</div>
+
+<!-- ── KPI BAR ─────────────────────────────────────────── -->
+<div id="kpibar">
+  <div class="kpi">
+    <div class="kpi-val blue" id="k-total">—</div>
+    <div class="kpi-label">Total Logged</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val" id="k-actions">—</div>
+    <div class="kpi-label">Open Actions</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val red" id="k-overdue">—</div>
+    <div class="kpi-label">Overdue</div>
+  </div>
+  <div class="kpi" style="border-right:none;">
+    <div class="kpi-label" style="margin-bottom:6px;">Comms by Lane</div>
+    <div class="lane-kpis">
+      <div class="lane-chip">
+        <div class="lane-chip-val" id="k-exec" style="color:var(--lane-exec)">—</div>
+        <div class="lane-chip-label">Exec</div>
+      </div>
+      <div class="lane-chip">
+        <div class="lane-chip-val" id="k-tech" style="color:var(--lane-tech)">—</div>
+        <div class="lane-chip-label">Tech</div>
+      </div>
+      <div class="lane-chip">
+        <div class="lane-chip-val" id="k-contract" style="color:var(--lane-contract)">—</div>
+        <div class="lane-chip-label">Contract</div>
+      </div>
+      <div class="lane-chip">
+        <div class="lane-chip-val" id="k-cost" style="color:var(--lane-cost)">—</div>
+        <div class="lane-chip-label">Cost</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB BAR ─────────────────────────────────────────── -->
+<div id="tabbar">
+  <button class="tab active" onclick="switchTab('comms-tab', this)">Communications Log</button>
+  <button class="tab" onclick="switchTab('actions-tab', this)">Action Dashboard</button>
+  <button class="tab-action-btn" id="primary-action-btn" onclick="openLogModal()">+ Log Communication</button>
+</div>
+
+<!-- ── CONTENT ─────────────────────────────────────────── -->
+<div id="content">
+
+  <!-- Communications Log Tab -->
+  <div id="comms-tab" class="tab-panel active">
+    <div class="filter-bar">
+      <div class="filter-tabs" id="lane-filter-tabs">
+        <button class="ftab active" data-lane="" onclick="setLaneFilter('', this)">All</button>
+        <button class="ftab exec" data-lane="executive" onclick="setLaneFilter('executive', this)">Executive</button>
+        <button class="ftab tech" data-lane="technical" onclick="setLaneFilter('technical', this)">Technical</button>
+        <button class="ftab contract" data-lane="contractual" onclick="setLaneFilter('contractual', this)">Contractual</button>
+        <button class="ftab cost" data-lane="cost" onclick="setLaneFilter('cost', this)">Cost</button>
+      </div>
+      <div class="filter-sep"></div>
+      <select class="filter-select" id="source-filter" onchange="loadComms()">
+        <option value="">All Sources</option>
+        <option value="email">Email</option>
+        <option value="teams">Teams</option>
+        <option value="call">Call</option>
+        <option value="text">Text</option>
+        <option value="meeting">Meeting</option>
+      </select>
+      <input type="text" class="filter-input" id="search-input" placeholder="Search subject, summary..." oninput="debounceSearch()">
+    </div>
+    <div class="table-wrap">
+      <table id="comms-table">
+        <thead>
+          <tr>
+            <th style="width:90px">Lane</th>
+            <th style="width:70px">Source</th>
+            <th style="width:90px">Date</th>
+            <th style="width:220px">Subject</th>
+            <th>Summary</th>
+            <th style="width:110px">Linked Ref</th>
+            <th style="width:60px;text-align:center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="comms-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Action Dashboard Tab -->
+  <div id="actions-tab" class="tab-panel">
+    <div class="filter-bar">
+      <div class="filter-tabs" id="action-lane-tabs">
+        <button class="ftab active" data-lane="" onclick="setActionLaneFilter('', this)">All Lanes</button>
+        <button class="ftab exec" data-lane="executive" onclick="setActionLaneFilter('executive', this)">Executive</button>
+        <button class="ftab tech" data-lane="technical" onclick="setActionLaneFilter('technical', this)">Technical</button>
+        <button class="ftab contract" data-lane="contractual" onclick="setActionLaneFilter('contractual', this)">Contractual</button>
+        <button class="ftab cost" data-lane="cost" onclick="setActionLaneFilter('cost', this)">Cost</button>
+      </div>
+      <div class="filter-sep"></div>
+      <select class="filter-select" id="action-status-filter" onchange="loadActions()">
+        <option value="">All Statuses</option>
+        <option value="open">Open</option>
+        <option value="in_progress">In Progress</option>
+        <option value="escalated">Escalated</option>
+        <option value="closed">Closed</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer;">
+        <input type="checkbox" id="overdue-only" onchange="loadActions()"> Overdue only
+      </label>
+    </div>
+    <div class="table-wrap">
+      <table id="actions-table">
+        <thead>
+          <tr>
+            <th style="width:24px"></th>
+            <th style="width:110px">Action ID</th>
+            <th>Description</th>
+            <th style="width:110px">Owner</th>
+            <th style="width:90px">Due Date</th>
+            <th style="width:90px">Lane</th>
+            <th style="width:90px">Status</th>
+            <th style="width:130px">Source Comm</th>
+            <th style="width:80px"></th>
+          </tr>
+        </thead>
+        <tbody id="actions-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────── -->
+<div id="footer">
+  <span>SENTINEL 001 / COMMUNICATIONS LOG</span>
+  <span id="footer-count" class="count"></span>
+  <span style="margin-left:auto;color:var(--muted)">Portal is the record of truth — log outcomes, not conversations</span>
+</div>
+
+</div><!-- #shell -->
+
+<!-- ══════════════════════════════════════════════════════
+     LOG COMMUNICATION MODAL
+═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title-text">Log Communication</div>
+      <button class="modal-close" onclick="closeLogModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row cols-3">
+        <div class="form-group">
+          <label class="form-label">Source <span class="req">*</span></label>
+          <select class="form-control" id="f-source">
+            <option value="email">Email</option>
+            <option value="teams">Teams</option>
+            <option value="call">Call / Video</option>
+            <option value="meeting">Meeting</option>
+            <option value="text">Text</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lane <span class="req">*</span></label>
+          <select class="form-control" id="f-lane">
+            <option value="technical">Technical</option>
+            <option value="executive">Executive</option>
+            <option value="contractual">Contractual</option>
+            <option value="cost">Cost</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date <span class="req">*</span></label>
+          <input type="date" class="form-control" id="f-date">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Subject / Title <span class="req">*</span></label>
+          <input type="text" class="form-control" id="f-subject" placeholder="Email subject, meeting title, or brief description">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Participants</label>
+          <input type="text" class="form-control" id="f-participants" placeholder="Names or email addresses, comma-separated">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Summary <span class="req">*</span></label>
+          <textarea class="form-control" id="f-summary" rows="3" placeholder="2–3 sentences describing what was discussed"></textarea>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Decisions Made</label>
+          <textarea class="form-control" id="f-decisions" rows="2" placeholder="Any decisions or commitments reached (leave blank if none)"></textarea>
+        </div>
+      </div>
+
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label">Linked Reference</label>
+          <input type="text" class="form-control" id="f-linked-ref" placeholder="e.g. BT3345_9001_009, TQ-SENT-001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reference Type</label>
+          <select class="form-control" id="f-linked-type">
+            <option value="">— none —</option>
+            <option value="submission">Submission</option>
+            <option value="tq">Technical Query</option>
+            <option value="ecf">Experience Finding</option>
+            <option value="requirement">DNV Requirement</option>
+            <option value="action">Action Item</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Inline Action Items -->
+      <div class="inline-actions-section">
+        <div class="inline-actions-header">
+          <span>Action Items Extracted</span>
+          <button class="btn-add-row" onclick="addInlineAction()">+ Add Action</button>
+        </div>
+        <div class="inline-actions-list" id="inline-actions-list">
+          <div style="font-size:11px;color:var(--muted);padding:4px 0;" id="no-actions-msg">No actions — click "+ Add Action" to extract an action from this communication.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeLogModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitLog()">Log Communication</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     EDIT ACTION MODAL
+═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="action-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Edit Action</div>
+      <button class="modal-close" onclick="closeActionModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ea-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Description <span class="req">*</span></label>
+          <textarea class="form-control" id="ea-description" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label">Owner</label>
+          <input type="text" class="form-control" id="ea-owner">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date</label>
+          <input type="date" class="form-control" id="ea-due-date">
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label">Lane</label>
+          <select class="form-control" id="ea-lane">
+            <option value="technical">Technical</option>
+            <option value="executive">Executive</option>
+            <option value="contractual">Contractual</option>
+            <option value="cost">Cost</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-control" id="ea-status">
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="escalated">Escalated</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" id="ea-notes" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeActionModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitActionEdit()">Save Action</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────
+let commsData = [];
+let actionsData = [];
+let activeLane = '';
+let activeActionLane = '';
+let expandedCommId = null;
+let searchTimer = null;
+let editingCommId = null;
+
+// ── Init ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').value = today;
+  loadSummary();
+  loadComms();
+});
+
+// ── Tab switching ────────────────────────────────────
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+
+  const actionBtn = document.getElementById('primary-action-btn');
+  if (tabId === 'actions-tab') {
+    actionBtn.textContent = '+ Add Action';
+    actionBtn.onclick = openStandaloneActionModal;
+    loadActions();
+  } else {
+    actionBtn.textContent = '+ Log Communication';
+    actionBtn.onclick = openLogModal;
+  }
+  updateFooter();
+}
+
+// ── KPI Summary ──────────────────────────────────────
+async function loadSummary() {
+  try {
+    const r = await fetch('/api/comms/summary');
+    const d = await r.json();
+    document.getElementById('k-total').textContent   = d.total_comms ?? 0;
+    document.getElementById('k-actions').textContent = d.open_actions ?? 0;
+    document.getElementById('k-overdue').textContent = d.overdue ?? 0;
+    document.getElementById('k-exec').textContent     = d.lanes?.executive ?? 0;
+    document.getElementById('k-tech').textContent     = d.lanes?.technical ?? 0;
+    document.getElementById('k-contract').textContent = d.lanes?.contractual ?? 0;
+    document.getElementById('k-cost').textContent     = d.lanes?.cost ?? 0;
+
+    const ov = d.overdue ?? 0;
+    document.getElementById('k-overdue').className = 'kpi-val ' + (ov > 0 ? 'red' : 'green');
+    const oa = d.open_actions ?? 0;
+    document.getElementById('k-actions').className = 'kpi-val ' + (oa > 0 ? 'amber' : 'green');
+  } catch(e) { console.error('Summary load failed', e); }
+}
+
+// ── Communications ───────────────────────────────────
+function setLaneFilter(lane, btn) {
+  activeLane = lane;
+  document.querySelectorAll('#lane-filter-tabs .ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadComms();
+}
+
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadComms, 300);
+}
+
+async function loadComms() {
+  const source = document.getElementById('source-filter').value;
+  const search = document.getElementById('search-input').value;
+  const params = new URLSearchParams();
+  if (activeLane) params.set('lane', activeLane);
+  if (source)     params.set('source', source);
+  if (search)     params.set('search', search);
+
+  try {
+    const r = await fetch('/api/comms?' + params);
+    commsData = await r.json();
+    renderComms();
+    updateFooter();
+  } catch(e) { console.error('Comms load failed', e); }
+}
+
+function renderComms() {
+  const tbody = document.getElementById('comms-tbody');
+  if (!commsData.length) {
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <div class="empty-state-title">No communications logged yet</div>
+        <div>Click "+ Log Communication" to record the first entry.</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = commsData.map(c => {
+    const isExpanded = expandedCommId === c.id;
+    const laneClass  = c.lane || 'technical';
+    const laneLabel  = {executive:'EXECUTIVE', technical:'TECHNICAL', contractual:'CONTRACTUAL', cost:'COST'}[c.lane] || c.lane.toUpperCase();
+    const srcLabel   = (c.source || '').toUpperCase();
+    const summary    = (c.summary || '').length > 100 ? c.summary.slice(0, 97) + '…' : (c.summary || '—');
+    const subject    = (c.subject || '').length > 40 ? c.subject.slice(0, 37) + '…' : (c.subject || '—');
+    const aCount     = c.action_count || 0;
+    const aOpen      = c.open_action_count || 0;
+    const linkedCell = c.linked_ref
+      ? `<span style="font-size:10px;color:var(--muted)">${escHtml(c.linked_ref_type ? c.linked_ref_type.toUpperCase() + ': ' : '')}${escHtml(c.linked_ref)}</span>`
+      : '<span style="color:var(--muted)">—</span>';
+
+    const mainRow = `
+      <tr data-id="${c.id}" onclick="toggleExpand(${c.id})" class="${isExpanded ? 'expanded' : ''}">
+        <td><span class="lane-badge ${laneClass}">${laneLabel}</span></td>
+        <td><span class="source-badge">${srcLabel}</span></td>
+        <td style="color:var(--muted);white-space:nowrap">${c.comm_date || '—'}</td>
+        <td style="font-weight:500">${escHtml(subject)}</td>
+        <td style="color:var(--muted)">${escHtml(summary)}</td>
+        <td>${linkedCell}</td>
+        <td style="text-align:center">
+          <span class="action-count ${aOpen > 0 ? 'has-open' : ''}">${aCount}</span>
+        </td>
+      </tr>`;
+
+    const detailRow = `
+      <tr class="detail-row ${isExpanded ? 'open' : ''}" data-detail-id="${c.id}">
+        <td colspan="7">
+          <div class="detail-panel" id="detail-${c.id}">
+            <div>
+              <div class="detail-section-title">Summary</div>
+              <div class="detail-text">${escHtml(c.summary || '—')}</div>
+              ${c.decisions ? `<div class="detail-section-title" style="margin-top:10px">Decisions</div><div class="detail-text">${escHtml(c.decisions)}</div>` : ''}
+              ${c.participants ? `<div class="detail-section-title" style="margin-top:10px">Participants</div><div class="detail-text">${escHtml(c.participants)}</div>` : ''}
+              ${c.linked_ref ? `<div class="detail-section-title" style="margin-top:10px">Linked To</div><div class="detail-text">${escHtml(c.linked_ref_type ? c.linked_ref_type + ': ' : '')}${escHtml(c.linked_ref)}</div>` : ''}
+              <div style="margin-top:10px;font-size:10px;color:var(--muted)">
+                ${c.comm_id} &nbsp;·&nbsp; Logged by ${escHtml(c.logged_by || 'Unknown')} &nbsp;·&nbsp; ${c.created_at ? c.created_at.slice(0,10) : ''}
+              </div>
+            </div>
+            <div>
+              <div class="detail-section-title">Actions (${aCount})</div>
+              <div class="detail-actions-list" id="detail-actions-${c.id}">
+                <span style="font-size:11px;color:var(--muted)">Loading…</span>
+              </div>
+            </div>
+            <div class="detail-panel-actions">
+              <button class="btn-sm" onclick="event.stopPropagation();openEditCommModal(${c.id})">Edit</button>
+              <button class="btn-sm" onclick="event.stopPropagation();addActionToComm(${c.id})">+ Add Action</button>
+              <button class="btn-sm danger" onclick="event.stopPropagation();deleteComm(${c.id})">Delete</button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+
+    return mainRow + detailRow;
+  }).join('');
+
+  // Load actions for expanded row
+  if (expandedCommId !== null) {
+    loadDetailActions(expandedCommId);
+  }
+}
+
+async function toggleExpand(id) {
+  if (expandedCommId === id) {
+    expandedCommId = null;
+  } else {
+    expandedCommId = id;
+    setTimeout(() => loadDetailActions(id), 50);
+  }
+  renderComms();
+}
+
+async function loadDetailActions(commId) {
+  const el = document.getElementById(`detail-actions-${commId}`);
+  if (!el) return;
+  try {
+    const r  = await fetch(`/api/comms/${commId}`);
+    const d  = await r.json();
+    const actions = d.actions || [];
+    if (!actions.length) {
+      el.innerHTML = '<span style="font-size:11px;color:var(--muted)">No actions extracted from this communication.</span>';
+      return;
+    }
+    el.innerHTML = actions.map(a => `
+      <div class="detail-action-item">
+        <span class="rag-dot ${a.rag}"></span>
+        <span style="flex:1">${escHtml(a.description)}</span>
+        <span style="color:var(--muted);font-size:10px">${escHtml(a.owner || '—')}</span>
+        <span style="color:var(--muted);font-size:10px;margin-left:8px">${a.due_date || 'no date'}</span>
+        <span class="status-badge ${a.status}" style="margin-left:8px">${a.status}</span>
+        <button class="btn-icon" style="margin-left:6px" onclick="event.stopPropagation();openEditActionModal(${a.id},'${escHtml(a.description)}','${escHtml(a.owner||'')}','${a.due_date||''}','${a.lane}','${a.status}','${escHtml(a.notes||'')}')" title="Edit">✎</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<span style="font-size:11px;color:var(--muted)">Failed to load actions.</span>';
+  }
+}
+
+// ── Actions tab ──────────────────────────────────────
+function setActionLaneFilter(lane, btn) {
+  activeActionLane = lane;
+  document.querySelectorAll('#action-lane-tabs .ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadActions();
+}
+
+async function loadActions() {
+  const status   = document.getElementById('action-status-filter').value;
+  const overdue  = document.getElementById('overdue-only').checked;
+  const params   = new URLSearchParams();
+  if (activeActionLane) params.set('lane', activeActionLane);
+  if (status)           params.set('status', status);
+  if (overdue)          params.set('overdue', '1');
+
+  try {
+    const r = await fetch('/api/comms/actions?' + params);
+    actionsData = await r.json();
+    renderActions();
+    updateFooter();
+  } catch(e) { console.error('Actions load failed', e); }
+}
+
+function renderActions() {
+  const tbody = document.getElementById('actions-tbody');
+  if (!actionsData.length) {
+    tbody.innerHTML = `<tr><td colspan="9">
+      <div class="empty-state">
+        <div class="empty-state-title">No actions match this filter</div>
+        <div>Actions are created when you log a communication or click "+ Add Action".</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = actionsData.map(a => {
+    const laneClass = a.lane || 'technical';
+    const laneLabel = {executive:'EXECUTIVE', technical:'TECHNICAL', contractual:'CONTRACTUAL', cost:'COST'}[a.lane] || a.lane.toUpperCase();
+    const dueStr    = a.due_date || '—';
+    const overdue   = a.rag === 'red';
+    return `
+      <tr>
+        <td><span class="rag-dot ${a.rag}" title="${ragLabel(a.rag)}"></span></td>
+        <td style="font-family:var(--font-head);font-size:11px;font-weight:600;color:var(--muted)">${escHtml(a.action_id)}</td>
+        <td>${escHtml(a.description)}</td>
+        <td style="color:var(--muted)">${escHtml(a.owner || '—')}</td>
+        <td style="${overdue ? 'color:var(--red);font-weight:600' : 'color:var(--muted)'};white-space:nowrap">${dueStr}</td>
+        <td><span class="lane-badge ${laneClass}">${laneLabel}</span></td>
+        <td><span class="status-badge ${a.status}">${a.status.replace('_',' ')}</span></td>
+        <td style="font-size:10px;color:var(--muted)">${a.source_comm_id ? escHtml(a.source_comm_id) : '—'}</td>
+        <td>
+          <button class="btn-sm" onclick="openEditActionModal(${a.id},'${escAttr(a.description)}','${escAttr(a.owner||'')}','${a.due_date||''}','${a.lane}','${a.status}','${escAttr(a.notes||'')}')">Edit</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function ragLabel(rag) {
+  return {red:'Overdue', amber:'Due Soon', green:'On Track', closed:'Closed'}[rag] || rag;
+}
+
+// ── Footer ───────────────────────────────────────────
+function updateFooter() {
+  const activeTab = document.querySelector('.tab-panel.active')?.id;
+  const el = document.getElementById('footer-count');
+  if (activeTab === 'comms-tab') {
+    el.textContent = `${commsData.length} communication${commsData.length !== 1 ? 's' : ''}`;
+  } else {
+    el.textContent = `${actionsData.length} action${actionsData.length !== 1 ? 's' : ''}`;
+  }
+}
+
+// ── Log Communication Modal ──────────────────────────
+function openLogModal() {
+  editingCommId = null;
+  document.getElementById('modal-title-text').textContent = 'Log Communication';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-source').value      = 'email';
+  document.getElementById('f-lane').value        = 'technical';
+  document.getElementById('f-date').value        = today;
+  document.getElementById('f-subject').value     = '';
+  document.getElementById('f-participants').value = '';
+  document.getElementById('f-summary').value     = '';
+  document.getElementById('f-decisions').value   = '';
+  document.getElementById('f-linked-ref').value  = '';
+  document.getElementById('f-linked-type').value = '';
+  document.getElementById('inline-actions-list').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);padding:4px 0;" id="no-actions-msg">
+      No actions — click "+ Add Action" to extract an action from this communication.
+    </div>`;
+  document.getElementById('log-modal').classList.add('open');
+}
+
+function openEditCommModal(id) {
+  const c = commsData.find(x => x.id === id);
+  if (!c) return;
+  editingCommId = id;
+  document.getElementById('modal-title-text').textContent = 'Edit Communication';
+  document.getElementById('f-source').value      = c.source || 'email';
+  document.getElementById('f-lane').value        = c.lane || 'technical';
+  document.getElementById('f-date').value        = c.comm_date || '';
+  document.getElementById('f-subject').value     = c.subject || '';
+  document.getElementById('f-participants').value = c.participants || '';
+  document.getElementById('f-summary').value     = c.summary || '';
+  document.getElementById('f-decisions').value   = c.decisions || '';
+  document.getElementById('f-linked-ref').value  = c.linked_ref || '';
+  document.getElementById('f-linked-type').value = c.linked_ref_type || '';
+  document.getElementById('inline-actions-list').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);padding:4px 0;">
+      Actions are managed via the Action Dashboard when editing.
+    </div>`;
+  document.getElementById('log-modal').classList.add('open');
+}
+
+function closeLogModal() {
+  document.getElementById('log-modal').classList.remove('open');
+  editingCommId = null;
+}
+
+// Inline action rows
+let inlineActionCount = 0;
+function addInlineAction() {
+  const noMsg = document.getElementById('no-actions-msg');
+  if (noMsg) noMsg.remove();
+  const list = document.getElementById('inline-actions-list');
+  const lane = document.getElementById('f-lane').value;
+  const idx = inlineActionCount++;
+  const row = document.createElement('div');
+  row.className = 'inline-action-row';
+  row.id = `ia-${idx}`;
+  row.innerHTML = `
+    <input type="text" class="form-control" placeholder="Action description" id="ia-desc-${idx}">
+    <input type="text" class="form-control" placeholder="Owner" id="ia-owner-${idx}">
+    <input type="date" class="form-control" id="ia-due-${idx}">
+    <button class="btn-icon" onclick="document.getElementById('ia-${idx}').remove()" title="Remove">✕</button>`;
+  list.appendChild(row);
+}
+
+async function submitLog() {
+  const subject = document.getElementById('f-subject').value.trim();
+  const summary = document.getElementById('f-summary').value.trim();
+  if (!subject && !summary) {
+    alert('Subject or Summary is required.');
+    return;
+  }
+
+  const lane = document.getElementById('f-lane').value;
+
+  // Collect inline actions
+  const actions = [];
+  document.querySelectorAll('[id^="ia-"]').forEach(row => {
+    const idx = row.id.split('-')[1];
+    const desc = document.getElementById(`ia-desc-${idx}`)?.value?.trim();
+    if (desc) {
+      actions.push({
+        description: desc,
+        owner: document.getElementById(`ia-owner-${idx}`)?.value?.trim() || '',
+        due_date: document.getElementById(`ia-due-${idx}`)?.value || '',
+        lane,
+      });
+    }
+  });
+
+  const payload = {
+    source:         document.getElementById('f-source').value,
+    lane,
+    comm_date:      document.getElementById('f-date').value,
+    participants:   document.getElementById('f-participants').value.trim(),
+    subject,
+    summary,
+    decisions:      document.getElementById('f-decisions').value.trim(),
+    linked_ref:     document.getElementById('f-linked-ref').value.trim(),
+    linked_ref_type: document.getElementById('f-linked-type').value,
+    actions,
+  };
+
+  // Get user identity
+  try {
+    const ir = await fetch('/api/identity');
+    const id = await ir.json();
+    payload.logged_by = id.name || '';
+  } catch(e) {}
+
+  try {
+    let url = '/api/comms';
+    let method = 'POST';
+    if (editingCommId) { url = `/api/comms/${editingCommId}`; method = 'PUT'; }
+
+    const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error(await r.text());
+    closeLogModal();
+    inlineActionCount = 0;
+    expandedCommId = null;
+    await loadComms();
+    await loadSummary();
+  } catch(e) {
+    alert('Failed to save: ' + e.message);
+  }
+}
+
+async function deleteComm(id) {
+  if (!confirm('Delete this communication and its extracted actions?')) return;
+  try {
+    await fetch(`/api/comms/${id}`, { method: 'DELETE' });
+    expandedCommId = null;
+    await loadComms();
+    await loadSummary();
+  } catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+function addActionToComm(commId) {
+  openStandaloneActionModal(commId);
+}
+
+// ── Action Modal ─────────────────────────────────────
+function openStandaloneActionModal(commId = null) {
+  document.getElementById('ea-id').value          = '';
+  document.getElementById('ea-description').value = '';
+  document.getElementById('ea-owner').value       = '';
+  document.getElementById('ea-due-date').value    = '';
+  document.getElementById('ea-lane').value        = 'technical';
+  document.getElementById('ea-status').value      = 'open';
+  document.getElementById('ea-notes').value       = '';
+  document.getElementById('ea-id').dataset.commId = commId || '';
+  document.querySelector('#action-modal .modal-title').textContent = 'Add Action';
+  document.getElementById('action-modal').classList.add('open');
+}
+
+function openEditActionModal(id, desc, owner, due, lane, status, notes) {
+  document.getElementById('ea-id').value          = id;
+  document.getElementById('ea-description').value = desc;
+  document.getElementById('ea-owner').value       = owner;
+  document.getElementById('ea-due-date').value    = due;
+  document.getElementById('ea-lane').value        = lane;
+  document.getElementById('ea-status').value      = status;
+  document.getElementById('ea-notes').value       = notes;
+  document.getElementById('ea-id').dataset.commId = '';
+  document.querySelector('#action-modal .modal-title').textContent = 'Edit Action';
+  document.getElementById('action-modal').classList.add('open');
+}
+
+function closeActionModal() {
+  document.getElementById('action-modal').classList.remove('open');
+}
+
+async function submitActionEdit() {
+  const id     = document.getElementById('ea-id').value;
+  const commId = document.getElementById('ea-id').dataset.commId;
+  const desc   = document.getElementById('ea-description').value.trim();
+  if (!desc) { alert('Description is required.'); return; }
+
+  const payload = {
+    description: desc,
+    owner:    document.getElementById('ea-owner').value.trim(),
+    due_date: document.getElementById('ea-due-date').value,
+    lane:     document.getElementById('ea-lane').value,
+    status:   document.getElementById('ea-status').value,
+    notes:    document.getElementById('ea-notes').value.trim(),
+  };
+
+  // Get identity
+  try {
+    const ir = await fetch('/api/identity');
+    const idata = await ir.json();
+    payload.logged_by = idata.name || '';
+  } catch(e) {}
+
+  try {
+    if (id) {
+      await fetch(`/api/comms/actions/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    } else {
+      if (commId) payload.comm_id = parseInt(commId);
+      await fetch('/api/comms/actions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    }
+    closeActionModal();
+    await loadActions();
+    await loadSummary();
+    if (expandedCommId) loadDetailActions(expandedCommId);
+  } catch(e) { alert('Failed to save action: ' + e.message); }
+}
+
+// ── Keyboard shortcuts ───────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeLogModal();
+    closeActionModal();
+  }
+});
+
+// ── Utilities ────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s || '').replace(/'/g,'&#39;').replace(/\n/g,' ');
+}
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

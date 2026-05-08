@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV–Bastion Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --surface3: #222e42;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #3B82F6;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-data); font-size: 13px; overflow: hidden; }
+#shell { display: grid; grid-template-rows: 48px 44px 1fr 32px; height: 100vh; }
+
+/* TOP BAR */
+#topbar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+.brand { font-family: var(--font-head); font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--text); text-decoration: none; display: flex; align-items: baseline; gap: 8px; }
+.brand span { font-size: 11px; font-weight: 400; color: var(--muted); font-family: var(--font-data); }
+.nav-links { margin-left: auto; display: flex; gap: 8px; }
+.nav-btn { font-family: var(--font-head); font-size: 12px; font-weight: 600; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; text-decoration: none; display: inline-block; transition: color .15s, border-color .15s; }
+.nav-btn:hover { color: var(--text); border-color: var(--blue); }
+.nav-btn.active { color: var(--blue); border-color: var(--blue); background: rgba(59,130,246,0.08); }
+
+/* REPORT TABS */
+#tabbar { background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 4px; }
+.rtab { font-family: var(--font-head); font-size: 13px; font-weight: 600; letter-spacing: 0.5px; padding: 8px 16px; border: none; background: transparent; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; white-space: nowrap; }
+.rtab:hover { color: var(--text); }
+.rtab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.export-btn { font-family: var(--font-head); font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s; display: none; }
+.export-btn:hover { color: var(--text); border-color: var(--blue); }
+.export-btn.visible { display: inline-block; }
+.refresh-btn { font-family: var(--font-data); font-size: 11px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
+.refresh-btn:hover { color: var(--text); }
+
+/* CONTENT */
+#content { overflow: hidden; position: relative; }
+.panel { display: none; height: 100%; overflow-y: auto; padding: 20px 24px; }
+.panel.active { display: block; }
+.panel::-webkit-scrollbar { width: 5px; }
+.panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* SECTION HEADER */
+.section-header { margin-bottom: 16px; }
+.section-title { font-family: var(--font-head); font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+.section-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.section-date { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* ═══════════════════════════════════════
+   REPORT 1 — SLA BREACH FORECAST
+═══════════════════════════════════════ */
+.sla-summary { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.sla-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 18px; flex: 1; min-width: 140px; }
+.sla-card-val { font-family: var(--font-head); font-size: 32px; font-weight: 700; line-height: 1; }
+.sla-card-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.val-red   { color: var(--red); }
+.val-amber { color: var(--amber); }
+.val-green { color: var(--green); }
+.val-blue  { color: var(--blue); }
+.val-muted { color: var(--muted); }
+
+.report-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.report-table th { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.report-table td { padding: 8px 10px; border-bottom: 1px solid rgba(30,45,69,0.6); vertical-align: middle; }
+.report-table tr:last-child td { border-bottom: none; }
+.report-table tr:hover td { background: rgba(59,130,246,0.04); }
+
+.badge { display: inline-block; font-family: var(--font-data); font-size: 10px; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+.badge-p1     { background: rgba(239,68,68,0.18);   color: #991B1B; border: 1px solid rgba(239,68,68,0.3); }
+.badge-p2     { background: rgba(245,158,11,0.18);  color: #92400E; border: 1px solid rgba(245,158,11,0.3); }
+.badge-p3     { background: rgba(59,130,246,0.15);  color: #93C5FD; border: 1px solid rgba(59,130,246,0.25); }
+.badge-p4     { background: var(--surface3); color: var(--muted); border: 1px solid var(--border); }
+.badge-red    { background: rgba(239,68,68,0.18);   color: #991B1B; border: 1px solid rgba(239,68,68,0.3); }
+.badge-amber  { background: rgba(245,158,11,0.18);  color: #92400E; border: 1px solid rgba(245,158,11,0.3); }
+.badge-green  { background: rgba(34,197,94,0.15);   color: #86EFAC; border: 1px solid rgba(34,197,94,0.25); }
+.badge-blue   { background: rgba(59,130,246,0.12);  color: #93C5FD; border: 1px solid rgba(59,130,246,0.2); }
+.badge-muted  { background: var(--surface3); color: var(--muted); border: 1px solid var(--border); }
+.badge-closed { background: var(--surface3); color: var(--muted); border: 1px solid var(--border); }
+
+.sla-bar-wrap { width: 80px; display: inline-block; background: var(--surface3); border-radius: 3px; height: 5px; vertical-align: middle; }
+.sla-bar-fill { height: 5px; border-radius: 3px; transition: width .3s; }
+
+/* ═══════════════════════════════════════
+   REPORT 2 — SCORECARD
+═══════════════════════════════════════ */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.kpi-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px; position: relative; overflow: hidden; }
+.kpi-tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 6px 6px 0 0; }
+.kpi-tile.green::before { background: var(--green); }
+.kpi-tile.amber::before { background: var(--amber); }
+.kpi-tile.red::before   { background: var(--red); }
+.kpi-tile.blue::before  { background: var(--blue); }
+.kpi-tile.muted::before { background: var(--muted); }
+.kpi-value { font-family: var(--font-head); font-size: 36px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+.kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.kpi-sub   { font-size: 10px; color: var(--muted); }
+.kpi-trend { font-size: 10px; margin-top: 6px; }
+
+.sc-section { margin-bottom: 24px; }
+.sc-section-title { font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+.prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 11px; }
+.prog-label { width: 180px; flex-shrink: 0; color: var(--muted); }
+.prog-bar-wrap { flex: 1; background: var(--surface3); border-radius: 3px; height: 7px; }
+.prog-bar-fill { height: 7px; border-radius: 3px; transition: width .4s; }
+.prog-val { width: 40px; text-align: right; font-family: var(--font-head); font-weight: 600; }
+
+/* ═══════════════════════════════════════
+   REPORT 3 — AUDIT READINESS
+═══════════════════════════════════════ */
+.audit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
+.audit-card-header { padding: 14px 16px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+.audit-name { font-family: var(--font-head); font-size: 16px; font-weight: 700; flex: 1; }
+.audit-date { font-size: 11px; color: var(--muted); }
+.audit-days { font-family: var(--font-head); font-size: 22px; font-weight: 700; }
+.audit-days-lbl { font-size: 10px; color: var(--muted); }
+.audit-scope { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.readiness-bar-wrap { height: 6px; background: var(--surface3); margin: 0; }
+.readiness-bar-fill { height: 6px; transition: width .4s; }
+
+.audit-body { padding: 14px 16px; }
+.audit-docs-title { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+.doc-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(30,45,69,0.5); font-size: 11px; }
+.doc-row:last-child { border-bottom: none; }
+.doc-num { font-family: var(--font-data); color: var(--blue); width: 110px; flex-shrink: 0; }
+.doc-title { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-status { flex-shrink: 0; }
+.doc-tq-warn { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--amber); flex-shrink: 0; }
+.blocker-list { margin-top: 12px; padding: 10px 12px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 4px; }
+.blocker-title { font-family: var(--font-head); font-size: 11px; font-weight: 700; color: var(--red); margin-bottom: 6px; letter-spacing: 0.5px; }
+.blocker-item { font-size: 11px; color: var(--text); padding: 3px 0; display: flex; gap: 8px; }
+.blocker-id { color: var(--red); font-family: var(--font-data); width: 70px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════
+   REPORT 4 — DOCREQ COVERAGE
+═══════════════════════════════════════ */
+.dr-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.dr-filter-select { font-family: var(--font-data); font-size: 11px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+.dr-filter-select:focus { outline: none; border-color: var(--blue); }
+.dr-filter-label { font-family: var(--font-head); font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+.badge-missing  { background: rgba(239,68,68,0.18);  color: #FCA5A5; border: 1px solid rgba(239,68,68,0.3); }
+.badge-gap      { background: rgba(245,158,11,0.18); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
+.badge-open-c   { background: rgba(245,158,11,0.18); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
+.badge-submitted{ background: rgba(59,130,246,0.15); color: #93C5FD; border: 1px solid rgba(59,130,246,0.25); }
+.badge-reviewed { background: rgba(34,197,94,0.15);  color: #86EFAC; border: 1px solid rgba(34,197,94,0.25); }
+.badge-inprog   { background: var(--surface3); color: var(--muted); border: 1px solid var(--border); }
+.badge-fi { background: rgba(59,130,246,0.1); color: #93C5FD; border: 1px solid rgba(59,130,246,0.2); font-size:9px; }
+.badge-ap { background: rgba(245,158,11,0.1); color: #92400E; border: 1px solid rgba(245,158,11,0.2); font-size:9px; }
+.dr-code { font-family: var(--font-data); font-size: 10px; color: var(--muted); }
+.dr-doc-num { font-family: var(--font-data); font-size: 10px; color: var(--blue); }
+/* ── DNV Rule tooltip ── */
+.dr-rule-wrap { position: relative; display: inline-block; cursor: default; }
+.dr-rule-ref  { font-family: var(--font-data); font-size: 10px; color: var(--blue);
+                white-space: nowrap; border-bottom: 1px dashed rgba(59,130,246,.4);
+                padding-bottom: 1px; }
+.dr-rule-tip  { display: none; position: absolute; left: 0; top: 100%; margin-top: 6px;
+                background: #1E2A3A; border: 1px solid var(--blue); border-radius: 6px;
+                padding: 10px 12px; width: 320px; z-index: 999; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+.dr-rule-tip-ref  { font-family: var(--font-data); font-size: 10px; color: var(--blue); margin-bottom: 6px; }
+.dr-rule-tip-text { font-size: 11px; color: var(--text); line-height: 1.5; }
+.dr-rule-tip-src  { font-size: 10px; color: var(--muted); margin-top: 6px; font-style: italic; }
+.dr-rule-wrap:hover .dr-rule-tip { display: block; }
+.dr-empty { color: var(--muted); font-style: italic; }
+.dr-item-num { font-family: var(--font-head); font-size: 13px; font-weight: 700; color: var(--muted); width: 28px; flex-shrink: 0; }
+.dr-count-bar { display: flex; gap: 3px; margin-top: 6px; height: 4px; border-radius: 2px; overflow: hidden; }
+.dr-count-bar span { height: 4px; }
+
+/* STATUS BAR */
+#statusbar { background: var(--surface); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 16px; font-size: 10px; color: var(--muted); }
+.sb-sep { color: var(--border); }
+
+/* PRINT STYLES */
+@media print {
+  #topbar, #tabbar, #statusbar { display: none !important; }
+  #shell { display: block; height: auto; }
+  #content { overflow: visible; height: auto; }
+  .panel { display: block !important; overflow: visible; height: auto; page-break-after: always; }
+  body { background: white; color: black; font-size: 11pt; }
+  .audit-card { border: 1px solid #ccc; page-break-inside: avoid; }
+  .kpi-tile   { border: 1px solid #ccc; }
+}
+</style>
+</head>
+<body>
+<div id="shell">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a class="brand" href="/">DNV–BASTION INTERFACE <span>Assurance Interface Management · Bastion Technologies Account</span></a>
+  <div class="nav-links">
+    <a href="/" class="nav-btn">DASHBOARD</a>
+    <a href="/coordinator" class="nav-btn">COORDINATOR</a>
+    <a href="/kanban" class="nav-btn">KANBAN</a>
+    <a href="/reports" class="nav-btn active">REPORTS</a>
+  </div>
+</div>
+
+<!-- REPORT TABS -->
+<div id="tabbar">
+  <button class="rtab active" onclick="switchReport('sla')">SLA BREACH FORECAST</button>
+  <button class="rtab" onclick="switchReport('scorecard')">INTERFACE HEALTH SCORECARD</button>
+  <button class="rtab" onclick="switchReport('audit')">AUDIT READINESS FORECAST</button>
+  <button class="rtab" onclick="switchReport('docreq')">DNV DOC REQUIREMENTS</button>
+  <div class="tab-actions">
+    <button class="export-btn" id="export-btn" onclick="exportReport()">⬇ EXPORT PDF</button>
+    <button class="refresh-btn" onclick="loadAll()">↺ REFRESH</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- ═══════════════════════════════════════
+       REPORT 1 — SLA BREACH FORECAST
+  ═══════════════════════════════════════ -->
+  <div class="panel active" id="panel-sla">
+    <div class="section-header">
+      <div class="section-title">SLA BREACH FORECAST</div>
+      <div class="section-sub">All open Technical Queries ranked by SLA urgency · 10 business-day response SLA</div>
+      <div class="section-date" id="sla-date"></div>
+    </div>
+    <div class="sla-summary" id="sla-summary"></div>
+    <table class="report-table" id="sla-table">
+      <thead>
+        <tr>
+          <th>TQ ID</th>
+          <th>Subject</th>
+          <th>Tier</th>
+          <th>Discipline</th>
+          <th>Response Owner</th>
+          <th>Opened</th>
+          <th>SLA Deadline</th>
+          <th>Status</th>
+          <th style="min-width:140px">Days Remaining</th>
+        </tr>
+      </thead>
+      <tbody id="sla-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       REPORT 2 — SCORECARD
+  ═══════════════════════════════════════ -->
+  <div class="panel" id="panel-scorecard">
+    <div class="section-header">
+      <div class="section-title">INTERFACE HEALTH SCORECARD</div>
+      <div class="section-sub">Programme KPI snapshot · Bastion Technologies — DNV Assurance Interface</div>
+      <div class="section-date" id="sc-date"></div>
+    </div>
+
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <hr class="divider">
+
+    <div class="sc-section">
+      <div class="sc-section-title">TQ Pipeline by Discipline</div>
+      <div id="disc-bars"></div>
+    </div>
+    <hr class="divider">
+
+    <div class="sc-section">
+      <div class="sc-section-title">Submission Status Breakdown</div>
+      <div id="sub-bars"></div>
+    </div>
+    <hr class="divider">
+
+    <div class="sc-section">
+      <div class="sc-section-title">Action RAG Distribution</div>
+      <div id="action-bars"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       REPORT 3 — AUDIT READINESS
+  ═══════════════════════════════════════ -->
+  <div class="panel" id="panel-audit">
+    <div class="section-header">
+      <div class="section-title">AUDIT READINESS FORECAST</div>
+      <div class="section-sub">Upcoming audit gates · evidence document status · open blockers</div>
+      <div class="section-date" id="audit-date"></div>
+    </div>
+    <div id="audit-cards"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       REPORT 4 — DNV DOC REQUIREMENTS
+  ═══════════════════════════════════════ -->
+  <div class="panel" id="panel-docreq">
+    <div class="section-header">
+      <div class="section-title">DNV DOCUMENT REQUIREMENTS</div>
+      <div class="section-sub">Documentation requirements for Live Underwater Habitats · DNV-RU-UWT Pt.5 Ch.10 Sec.1 · Vanguard 02</div>
+      <div class="section-date" id="dr-date"></div>
+    </div>
+
+    <div class="sla-summary" id="dr-kpis"></div>
+    <hr class="divider">
+
+    <div class="dr-filters">
+      <span class="dr-filter-label">SUBSYSTEM</span>
+      <select class="dr-filter-select" id="dr-sub-filter" onchange="renderDocReq()">
+        <option value="">All</option>
+      </select>
+      <span class="dr-filter-label" style="margin-left:8px">APPROVAL</span>
+      <select class="dr-filter-select" id="dr-ap-filter" onchange="renderDocReq()">
+        <option value="">All</option>
+        <option value="FI">FI — For Information</option>
+        <option value="AP">AP — For Approval</option>
+      </select>
+      <span class="dr-filter-label" style="margin-left:8px">DNV RULE</span>
+      <select class="dr-filter-select" id="dr-rule-filter" onchange="renderDocReq()">
+        <option value="">All Rules</option>
+      </select>
+      <span class="dr-filter-label" style="margin-left:8px">STATUS</span>
+      <select class="dr-filter-select" id="dr-cov-filter" onchange="renderDocReq()">
+        <option value="">All</option>
+        <option value="MISSING">MISSING</option>
+        <option value="Gap">Gap</option>
+        <option value="Open Comments">Open Comments</option>
+        <option value="Submitted">Submitted</option>
+        <option value="DNV Reviewed">DNV Reviewed</option>
+        <option value="In Progress">In Progress</option>
+      </select>
+    </div>
+
+    <table class="report-table" id="dr-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Code</th>
+          <th>DNV Rule</th>
+          <th>Requirement</th>
+          <th>Type</th>
+          <th>Document</th>
+          <th>Description</th>
+          <th>Owner</th>
+          <th>DNV Status</th>
+          <th>Comments</th>
+          <th>Coverage</th>
+        </tr>
+      </thead>
+      <tbody id="dr-tbody"></tbody>
+    </table>
+    <div id="dr-empty" style="display:none;padding:40px;text-align:center;color:var(--muted);font-size:12px;">No requirements match the current filters.</div>
+  </div>
+
+</div><!-- #content -->
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span id="sb-report">SLA FORECAST</span>
+  <span class="sb-sep">|</span>
+  <span id="sb-asof">–</span>
+  <span class="sb-sep" style="margin-left:auto">|</span>
+  <span id="sb-time">–</span>
+</div>
+
+</div><!-- #shell -->
+
+<script>
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const TODAY_STR = fmt(TODAY);
+let DATA = { tqs:[], actions:[], submissions:[], audits:[], dnvreqs:[] };
+let currentReport = 'sla';
+
+// ── BUSINESS DAYS ────────────────────────────────────────────────
+function bizDaysElapsed(fromStr) {
+  if (!fromStr) return 0;
+  const start = new Date(fromStr); start.setHours(0,0,0,0);
+  let count = 0, d = new Date(start);
+  while (d < TODAY) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+function addBizDays(fromStr, days) {
+  if (!fromStr) return null;
+  const d = new Date(fromStr); d.setHours(0,0,0,0);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d;
+}
+function calDaysTo(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr); d.setHours(0,0,0,0);
+  return Math.round((d - TODAY) / 86400000);
+}
+function fmt(d) { return d.toISOString().split('T')[0]; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── LOAD ─────────────────────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([
+    fetch('/api/csv/tqs').then(r=>r.json()).then(d=>DATA.tqs=d),
+    fetch('/api/csv/actions').then(r=>r.json()).then(d=>DATA.actions=d),
+    fetch('/api/csv/submissions').then(r=>r.json()).then(d=>DATA.submissions=d),
+    fetch('/api/csv/audits').then(r=>r.json()).then(d=>DATA.audits=d),
+    fetch('/api/csv/dnv_requirements').then(r=>r.json()).then(d=>{ DATA.dnvreqs=d; populateDrFilters(); }),
+  ]);
+  renderAll();
+  document.getElementById('sb-time').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+function renderAll() {
+  renderSLA();
+  renderScorecard();
+  renderAudit();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// REPORT 1 — SLA BREACH FORECAST
+// ══════════════════════════════════════════════════════════════════
+function renderSLA() {
+  document.getElementById('sla-date').textContent = 'As of ' + TODAY_STR;
+
+  const open = DATA.tqs.filter(t => t.Status === 'Open');
+  const rows = open.map(t => {
+    const elapsed = bizDaysElapsed(t.DateOpened);
+    const remaining = 10 - elapsed;
+    const deadline = addBizDays(t.DateOpened, 10);
+    return { ...t, elapsed, remaining, deadline };
+  }).sort((a,b) => a.remaining - b.remaining);
+
+  // Summary cards
+  const breached = rows.filter(r => r.remaining < 0).length;
+  const critical = rows.filter(r => r.remaining >= 0 && r.remaining <= 2).length;
+  const warning  = rows.filter(r => r.remaining >= 3 && r.remaining <= 5).length;
+  const ontrack  = rows.filter(r => r.remaining > 5).length;
+  const p1open   = rows.filter(r => (r.EscalationTier||'').toUpperCase()==='P1').length;
+
+  document.getElementById('sla-summary').innerHTML = `
+    <div class="sla-card"><div class="sla-card-val val-red">${breached}</div><div class="sla-card-lbl">SLA Breached</div></div>
+    <div class="sla-card"><div class="sla-card-val val-amber">${critical}</div><div class="sla-card-lbl">Critical (≤2 days)</div></div>
+    <div class="sla-card"><div class="sla-card-val" style="color:#F97316">${warning}</div><div class="sla-card-lbl">Warning (3–5 days)</div></div>
+    <div class="sla-card"><div class="sla-card-val val-green">${ontrack}</div><div class="sla-card-lbl">On Track</div></div>
+    <div class="sla-card"><div class="sla-card-val val-blue">${p1open}</div><div class="sla-card-lbl">P1 Critical Path Open</div></div>
+  `;
+
+  const tbody = document.getElementById('sla-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">No open TQs</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const tier = (r.EscalationTier||'').toUpperCase();
+    const tierBadge = tier ? `<span class="badge badge-${tier.toLowerCase()}">${esc(tier)}</span>` : '—';
+    const deadlineStr = r.deadline ? fmt(r.deadline) : '—';
+
+    let statusBadge, barColor, barPct;
+    if (r.remaining < 0) {
+      statusBadge = `<span class="badge badge-red">BREACHED · ${Math.abs(r.remaining)}d over</span>`;
+      barColor = 'var(--red)'; barPct = 100;
+    } else if (r.remaining <= 2) {
+      statusBadge = `<span class="badge badge-amber">CRITICAL · ${r.remaining}d left</span>`;
+      barColor = 'var(--amber)'; barPct = Math.round((r.elapsed/10)*100);
+    } else if (r.remaining <= 5) {
+      statusBadge = `<span class="badge" style="background:rgba(249,115,22,0.18);color:#FDBA74;border:1px solid rgba(249,115,22,0.3)">WARNING · ${r.remaining}d left</span>`;
+      barColor = '#F97316'; barPct = Math.round((r.elapsed/10)*100);
+    } else {
+      statusBadge = `<span class="badge badge-green">ON TRACK · ${r.remaining}d left</span>`;
+      barColor = 'var(--green)'; barPct = Math.round((r.elapsed/10)*100);
+    }
+
+    return `<tr>
+      <td style="font-family:var(--font-data);color:var(--blue)">${esc(r.TQID)}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.Subject)}</td>
+      <td>${tierBadge}</td>
+      <td><span class="badge badge-blue">${esc(r.OriginatingReviewer||'—')}</span></td>
+      <td style="color:var(--muted)">${esc(r.ResponseOwner||'Unassigned')}</td>
+      <td style="color:var(--muted);font-family:var(--font-data)">${esc(r.DateOpened)}</td>
+      <td style="font-family:var(--font-data)">${deadlineStr}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="sla-bar-wrap"><div class="sla-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
+          <span style="font-size:10px;color:var(--muted)">${r.elapsed}/10 bd</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// REPORT 2 — SCORECARD
+// ══════════════════════════════════════════════════════════════════
+function renderScorecard() {
+  document.getElementById('sc-date').textContent = 'As of ' + TODAY_STR;
+
+  const tqs = DATA.tqs, acts = DATA.actions, subs = DATA.submissions;
+
+  // KPI: SLA compliance on closed TQs
+  const closedTQs = tqs.filter(t => t.Status !== 'Open' && t.DateOpened && t.DateResponded);
+  const slaCompliant = closedTQs.filter(t => bizDaysElapsed_between(t.DateOpened, t.DateResponded) <= 10).length;
+  const slaPct = closedTQs.length ? Math.round((slaCompliant/closedTQs.length)*100) : null;
+
+  // KPI: Open TQs
+  const openTQs = tqs.filter(t=>t.Status==='Open').length;
+  const p1Open  = tqs.filter(t=>t.Status==='Open'&&(t.EscalationTier||'').toUpperCase()==='P1').length;
+
+  // KPI: Actions overdue
+  const actsOverdue = acts.filter(a => {
+    if (!a.DueDate || ['Complete','Closed'].includes(a.Status)) return false;
+    return calDaysTo(a.DueDate) < 0;
+  }).length;
+
+  // KPI: Submission acceptance rate
+  const decided = subs.filter(s=>['Accepted','Rejected'].includes(s.Status));
+  const accepted = subs.filter(s=>s.Status==='Accepted').length;
+  const accRate = decided.length ? Math.round((accepted/decided.length)*100) : null;
+
+  // KPI: Unassigned TQs
+  const unassigned = tqs.filter(t=>t.Status==='Open'&&!t.ResponseOwner).length;
+
+  // KPI: Active audit readiness
+  const activeAudits = DATA.audits.filter(a=>['Active','Upcoming'].includes(a.Status));
+  const avgReadiness = activeAudits.length
+    ? Math.round(activeAudits.reduce((s,a)=>s+(+a.ReadinessScore||0),0)/activeAudits.length) : null;
+
+  const kpiData = [
+    { label:'SLA Compliance', value: slaPct !== null ? slaPct+'%' : 'N/A', sub: `${slaCompliant}/${closedTQs.length} TQs within 10bd`, color: slaPct===null?'muted':slaPct>=80?'green':slaPct>=60?'amber':'red' },
+    { label:'Open TQs', value: openTQs, sub: `${p1Open} critical path (P1)`, color: openTQs===0?'green':p1Open>0?'red':'amber' },
+    { label:'Actions Overdue', value: actsOverdue, sub: `of ${acts.filter(a=>!['Complete','Closed'].includes(a.Status)).length} open actions`, color: actsOverdue===0?'green':actsOverdue<=3?'amber':'red' },
+    { label:'Submission Accept Rate', value: accRate !== null ? accRate+'%' : 'N/A', sub: `${accepted} of ${decided.length} decided`, color: accRate===null?'muted':accRate>=85?'green':accRate>=70?'amber':'red' },
+    { label:'Unassigned TQs', value: unassigned, sub: 'open TQs with no response owner', color: unassigned===0?'green':unassigned<=2?'amber':'red' },
+    { label:'Avg Audit Readiness', value: avgReadiness !== null ? avgReadiness+'%' : 'N/A', sub: `${activeAudits.length} active/upcoming audits`, color: avgReadiness===null?'muted':avgReadiness>=80?'green':avgReadiness>=50?'amber':'red' },
+  ];
+
+  document.getElementById('kpi-grid').innerHTML = kpiData.map(k=>`
+    <div class="kpi-tile ${k.color}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${k.color==='red'?'val-red':k.color==='amber'?'val-amber':k.color==='green'?'val-green':k.color==='blue'?'val-blue':'val-muted'}">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  // Discipline bars
+  const disciplines = [...new Set(tqs.map(t=>t.OriginatingReviewer).filter(Boolean))];
+  const maxDiscOpen = Math.max(1, ...disciplines.map(d=>tqs.filter(t=>t.Status==='Open'&&t.OriginatingReviewer===d).length));
+  document.getElementById('disc-bars').innerHTML = disciplines.map(d=>{
+    const open = tqs.filter(t=>t.Status==='Open'&&t.OriginatingReviewer===d).length;
+    const closed = tqs.filter(t=>t.Status!=='Open'&&t.OriginatingReviewer===d).length;
+    const pct = Math.round((open/maxDiscOpen)*100);
+    return `<div class="prog-row">
+      <span class="prog-label">${esc(d)}</span>
+      <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%;background:var(--blue)"></div></div>
+      <span class="prog-val val-blue">${open}</span>
+      <span style="font-size:10px;color:var(--muted)">open · ${closed} closed</span>
+    </div>`;
+  }).join('') || '<span style="color:var(--muted);font-size:11px">No data</span>';
+
+  // Submission bars
+  const subStatuses = ['New','Under Review','Accepted','Rejected'];
+  const subColors = { New:'var(--blue)', 'Under Review':'var(--amber)', Accepted:'var(--green)', Rejected:'var(--red)' };
+  const maxSub = Math.max(1,...subStatuses.map(s=>subs.filter(x=>x.Status===s).length));
+  document.getElementById('sub-bars').innerHTML = subStatuses.map(s=>{
+    const cnt = subs.filter(x=>x.Status===s).length;
+    const pct = Math.round((cnt/maxSub)*100);
+    return `<div class="prog-row">
+      <span class="prog-label">${s}</span>
+      <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%;background:${subColors[s]}"></div></div>
+      <span class="prog-val" style="color:${subColors[s]}">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  // Action RAG bars
+  const rags = ['RED','AMBER','GREEN'];
+  const ragColors = { RED:'var(--red)', AMBER:'var(--amber)', GREEN:'var(--green)' };
+  const maxRAG = Math.max(1,...rags.map(r=>acts.filter(a=>a.RAGStatus===r).length));
+  document.getElementById('action-bars').innerHTML = rags.map(r=>{
+    const cnt = acts.filter(a=>a.RAGStatus===r).length;
+    const pct = Math.round((cnt/maxRAG)*100);
+    return `<div class="prog-row">
+      <span class="prog-label">${r}</span>
+      <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%;background:${ragColors[r]}"></div></div>
+      <span class="prog-val" style="color:${ragColors[r]}">${cnt}</span>
+    </div>`;
+  }).join('');
+}
+
+function bizDaysElapsed_between(fromStr, toStr) {
+  if (!fromStr || !toStr) return 0;
+  const start = new Date(fromStr); start.setHours(0,0,0,0);
+  const end   = new Date(toStr);   end.setHours(0,0,0,0);
+  let count = 0, d = new Date(start);
+  while (d < end) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// REPORT 3 — AUDIT READINESS
+// ══════════════════════════════════════════════════════════════════
+function renderAudit() {
+  document.getElementById('audit-date').textContent = 'As of ' + TODAY_STR;
+
+  const upcoming = DATA.audits
+    .filter(a => a.Status !== 'Complete')
+    .sort((a,b) => new Date(a.AuditDate) - new Date(b.AuditDate));
+
+  if (!upcoming.length) {
+    document.getElementById('audit-cards').innerHTML = '<p style="color:var(--muted);font-size:12px">No upcoming audits.</p>';
+    return;
+  }
+
+  document.getElementById('audit-cards').innerHTML = upcoming.map(audit => {
+    const daysTo = calDaysTo(audit.AuditDate);
+    const daysLabel = daysTo < 0 ? `${Math.abs(daysTo)}d overdue` : daysTo === 0 ? 'TODAY' : `${daysTo}d`;
+    const daysColor = daysTo < 0 ? 'var(--red)' : daysTo <= 7 ? 'var(--amber)' : 'var(--text)';
+    const docNums = (audit.RequiredEvidenceDocNumbers||'').split('|').map(s=>s.trim()).filter(Boolean);
+
+    // For each required doc: find submission record, find open TQs
+    const docRows = docNums.map(docNum => {
+      const sub = DATA.submissions.find(s=>s.DocumentNumber===docNum);
+      const openTQs = DATA.tqs.filter(t=>t.SourceDocumentNumber===docNum && t.Status==='Open');
+      const subStatus = sub ? sub.Status : 'Not Found';
+      const subBadge = sub
+        ? `<span class="badge ${subStatus==='Accepted'?'badge-green':subStatus==='Under Review'?'badge-amber':subStatus==='New'?'badge-blue':'badge-muted'}">${esc(subStatus)}</span>`
+        : `<span class="badge badge-red">NOT SUBMITTED</span>`;
+      const tqWarn = openTQs.length
+        ? `<span class="doc-tq-warn">⚠ ${openTQs.length} open TQ${openTQs.length>1?'s':''}</span>` : '';
+      const docTitle = sub ? sub.DocumentTitle : docNum;
+      return { docNum, docTitle, subBadge, tqWarn, openTQs, sub, subStatus };
+    });
+
+    // Blockers: open TQs on any required doc
+    const blockers = docRows.flatMap(d=>d.openTQs);
+    const docsOk = docRows.filter(d=>d.subStatus==='Accepted' && d.openTQs.length===0).length;
+    const readinessPct = docNums.length ? Math.round((docsOk/docNums.length)*100) : 0;
+    const barColor = readinessPct >= 80 ? 'var(--green)' : readinessPct >= 50 ? 'var(--amber)' : 'var(--red)';
+    const readinessBadge = readinessPct >= 80 ? 'badge-green' : readinessPct >= 50 ? 'badge-amber' : 'badge-red';
+
+    return `
+    <div class="audit-card">
+      <div class="audit-card-header">
+        <div style="flex:1">
+          <div class="audit-name">${esc(audit.AuditID)} — ${esc(audit.AuditName)}</div>
+          <div class="audit-scope">${esc(audit.Scope)}</div>
+          <div class="audit-date" style="margin-top:4px">${esc(audit.AuditDate)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="audit-days" style="color:${daysColor}">${daysLabel}</div>
+          <div class="audit-days-lbl">to audit date</div>
+          <div style="margin-top:6px"><span class="badge ${readinessBadge}">${readinessPct}% READY</span></div>
+        </div>
+      </div>
+      <div class="readiness-bar-wrap"><div class="readiness-bar-fill" style="width:${readinessPct}%;background:${barColor}"></div></div>
+      <div class="audit-body">
+        <div class="audit-docs-title">Required Evidence Documents (${docNums.length})</div>
+        ${docRows.map(d=>`
+          <div class="doc-row">
+            <span class="doc-num">${esc(d.docNum)}</span>
+            <span class="doc-title">${esc(d.docTitle)}</span>
+            <span class="doc-status">${d.subBadge}</span>
+            ${d.tqWarn}
+          </div>`).join('')}
+        ${blockers.length ? `
+        <div class="blocker-list">
+          <div class="blocker-title">⛔ BLOCKERS — Open TQs on required documents</div>
+          ${blockers.map(t=>`
+            <div class="blocker-item">
+              <span class="blocker-id">${esc(t.TQID)}</span>
+              <span>${esc(t.Subject)} <span style="color:var(--muted)">[${esc(t.SourceDocumentNumber)}]</span></span>
+              <span class="badge badge-${(t.EscalationTier||'').toLowerCase()||'muted'}" style="margin-left:auto">${esc(t.EscalationTier||'—')}</span>
+            </div>`).join('')}
+        </div>` : `<div style="margin-top:10px;font-size:11px;color:var(--green)">✓ No open TQ blockers on required documents</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── DOC REQUIREMENTS ─────────────────────────────────────────────
+function covBadge(cov) {
+  const map = {
+    'MISSING':      ['badge-missing',  'MISSING'],
+    'Gap':          ['badge-gap',      'GAP'],
+    'Open Comments':['badge-open-c',   'OPEN COMMENTS'],
+    'Submitted':    ['badge-submitted','SUBMITTED'],
+    'DNV Reviewed': ['badge-reviewed', 'DNV REVIEWED'],
+    'In Progress':  ['badge-inprog',   'IN PROGRESS'],
+  };
+  const [cls, label] = map[cov] || ['badge-muted', cov||'—'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function populateDrFilters() {
+  const rows = DATA.dnvreqs;
+  // Subsystem
+  const subs = [...new Set(rows.map(r=>r.subsystem||'').filter(Boolean))].sort();
+  const subSel = document.getElementById('dr-sub-filter');
+  subSel.innerHTML = '<option value="">All</option>' +
+    subs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  // DNV Rule
+  const rules = [...new Set(rows.map(r=>r.rule_ref||'').filter(Boolean))].sort();
+  const ruleSel = document.getElementById('dr-rule-filter');
+  ruleSel.innerHTML = '<option value="">All Rules</option>' +
+    rules.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join('');
+}
+
+function renderDocReq() {
+  const rows = DATA.dnvreqs;
+  if (!rows.length) return;
+
+  const subF  = document.getElementById('dr-sub-filter').value;
+  const apF   = document.getElementById('dr-ap-filter').value;
+  const covF  = document.getElementById('dr-cov-filter').value;
+  const ruleF = document.getElementById('dr-rule-filter').value;
+
+  const filtered = rows.filter(r => {
+    if (subF  && r.subsystem     !== subF)  return false;
+    if (apF   && r.approval_type !== apF)   return false;
+    if (covF  && r.coverage_status !== covF) return false;
+    if (ruleF && r.rule_ref       !== ruleF) return false;
+    return true;
+  });
+
+  // KPIs (always from full dataset, not filtered)
+  const total    = rows.filter(r=>r.item_number!==''&&r.item_number!=null).length;
+  const missing  = rows.filter(r=>r.coverage_status==='MISSING').length;
+  const gaps     = rows.filter(r=>r.coverage_status==='Gap').length;
+  const openC    = rows.filter(r=>r.coverage_status==='Open Comments').length;
+  const reviewed = rows.filter(r=>r.coverage_status==='DNV Reviewed').length;
+  const submitted= rows.filter(r=>r.coverage_status==='Submitted').length;
+  const totalOC  = rows.reduce((s,r)=>s+(parseInt(r.open_comments)||0),0);
+
+  document.getElementById('dr-kpis').innerHTML = `
+    <div class="sla-card"><div class="sla-card-val val-blue">${total}</div><div class="sla-card-lbl">Total Requirements</div></div>
+    <div class="sla-card"><div class="sla-card-val val-green">${reviewed}</div><div class="sla-card-lbl">DNV Reviewed</div></div>
+    <div class="sla-card"><div class="sla-card-val val-blue">${submitted}</div><div class="sla-card-lbl">Submitted to DNV</div></div>
+    <div class="sla-card"><div class="sla-card-val val-amber">${openC}</div><div class="sla-card-lbl">Open Comments <span style="font-size:14px">(${totalOC} total)</span></div></div>
+    <div class="sla-card"><div class="sla-card-val val-amber">${gaps}</div><div class="sla-card-lbl">Gaps (No Doc)</div></div>
+    <div class="sla-card"><div class="sla-card-val val-red">${missing}</div><div class="sla-card-lbl">MISSING</div></div>
+  `;
+  document.getElementById('dr-date').textContent = 'As of ' + TODAY_STR + ' · Source: DNV_Document_Tracker 2.0';
+
+  const tbody = document.getElementById('dr-tbody');
+  const empty = document.getElementById('dr-empty');
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map(r => {
+    const apBadge = r.approval_type === 'AP'
+      ? `<span class="badge badge-ap">AP</span>`
+      : r.approval_type === 'FI'
+        ? `<span class="badge badge-fi">FI</span>`
+        : `<span class="val-muted">—</span>`;
+    const docNum = r.document_number
+      ? `<span class="dr-doc-num">${esc(r.document_number)}</span>`
+      : `<span class="dr-empty">—</span>`;
+    const dnvSt = r.dnv_status
+      ? `<span class="badge badge-muted" style="font-size:9px">${esc(r.dnv_status)}</span>`
+      : `<span class="val-muted">—</span>`;
+    const openComments = parseInt(r.open_comments)||0;
+    const ocCell = openComments > 0
+      ? `<span class="val-amber" style="font-family:var(--font-head);font-weight:700">${openComments}</span>`
+      : `<span class="val-muted">0</span>`;
+    return `<tr>
+      <td style="font-family:var(--font-head);font-size:13px;font-weight:700;color:var(--muted)">${esc(String(r.item_number||''))}</td>
+      <td class="dr-code">${esc(r.dnv_code||'')}</td>
+      <td>
+        <div class="dr-rule-wrap">
+          <span class="dr-rule-ref">${esc(r.rule_ref||'—')}</span>
+          ${r.rule_ref ? `<div class="dr-rule-tip">
+            <div class="dr-rule-tip-ref">DNV-RU-UWT ${esc(r.rule_ref)}</div>
+            <div class="dr-rule-tip-text">${esc(r.requirement_text||'')}</div>
+            ${r.ref_source ? `<div class="dr-rule-tip-src">${esc(r.ref_source)}</div>` : ''}
+          </div>` : ''}
+        </div>
+      </td>
+      <td style="max-width:260px;white-space:normal;line-height:1.4">${esc(r.requirement_text||'')}</td>
+      <td>${apBadge}</td>
+      <td>${docNum}</td>
+      <td style="max-width:220px;white-space:normal;font-size:11px;color:var(--muted);line-height:1.3">${esc(r.document_description||'')}</td>
+      <td style="font-size:11px">${esc(r.owner||'—')}</td>
+      <td>${dnvSt}</td>
+      <td style="text-align:center">${ocCell}</td>
+      <td>${covBadge(r.coverage_status)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────
+const REPORT_META = {
+  sla:       { label:'SLA FORECAST',       export:true },
+  scorecard: { label:'SCORECARD',          export:true },
+  audit:     { label:'AUDIT READINESS',    export:true },
+  docreq:    { label:'DNV DOC REQUIREMENTS', export:true },
+};
+function switchReport(name) {
+  currentReport = name;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.querySelectorAll('.rtab').forEach(t=>{
+    if(t.getAttribute('onclick')===`switchReport('${name}')`) t.classList.add('active');
+  });
+  const meta = REPORT_META[name];
+  document.getElementById('sb-report').textContent = meta.label;
+  const expBtn = document.getElementById('export-btn');
+  expBtn.classList.toggle('visible', meta.export);
+  document.getElementById('sb-asof').textContent = 'As of ' + TODAY_STR;
+}
+function exportReport() {
+  const endpoints = {
+    scorecard: '/api/export/scorecard-pdf',
+    sla:       '/api/export/sla-pdf',
+    audit:     '/api/export/audit-pdf',
+    docreq:    '/api/export/docreq-pdf',
+  };
+  const url = endpoints[currentReport];
+  if (url) {
+    window.location.href = url;
+  } else {
+    window.print();
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+document.getElementById('sb-asof').textContent = 'As of ' + TODAY_STR;
+switchReport('sla');
+loadAll();
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

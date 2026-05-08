@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV Doc Requirements — Bastion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --surface3: #222e42;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #3B82F6;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-data); font-size: 13px; overflow: hidden; }
+
+/* ── Shell ── */
+#shell { display: grid; grid-template-rows: 48px 1fr; height: 100vh; }
+
+/* ── Topbar ── */
+#topbar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+.brand { font-family: var(--font-head); font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--text); text-decoration: none; display: flex; align-items: baseline; gap: 8px; }
+.brand span { font-size: 11px; font-weight: 400; color: var(--muted); font-family: var(--font-data); }
+.nav-links { margin-left: auto; display: flex; gap: 8px; }
+.nav-btn { font-family: var(--font-head); font-size: 12px; font-weight: 600; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; text-decoration: none; display: inline-block; transition: color .15s, border-color .15s; }
+.nav-btn:hover { color: var(--text); border-color: var(--blue); }
+.nav-btn.active { color: var(--blue); border-color: var(--blue); background: rgba(59,130,246,0.08); }
+/* ── Identity widget ── */
+#identity-widget { display: flex; align-items: center; gap: 6px; margin-left: 12px; padding-left: 12px; border-left: 1px solid var(--border); }
+#identity-display { font-family: var(--font-data); font-size: 11px; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 4px; border: 1px solid transparent; transition: all .15s; }
+#identity-display:hover { border-color: var(--border); background: var(--surface2); }
+#identity-display.unset { color: var(--amber); border-color: rgba(217,119,6,0.3); background: rgba(217,119,6,0.06); }
+#identity-form { display: none; align-items: center; gap: 6px; }
+#identity-input { font-family: var(--font-data); font-size: 11px; background: var(--surface2); border: 1px solid var(--blue); color: var(--text); padding: 3px 8px; border-radius: 3px; width: 140px; }
+#identity-input:focus { outline: none; }
+#identity-save { font-family: var(--font-head); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 3px; border: 1px solid var(--blue); background: rgba(37,99,235,0.1); color: var(--blue); cursor: pointer; }
+#identity-cancel { font-family: var(--font-head); font-size: 11px; padding: 3px 8px; border-radius: 3px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
+
+/* ── Body: left list + right detail ── */
+#body { display: grid; grid-template-columns: 320px 1fr; height: 100%; overflow: hidden; }
+
+/* ── Left panel ── */
+#left { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+#left-header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.left-title { font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.export-btn { font-family: var(--font-head); font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 3px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; margin-left: auto; transition: all .15s; }
+.export-btn:hover { color: var(--green); border-color: var(--green); }
+.code-filter-row { margin-bottom: 8px; }
+.code-filter-row select { font-family: var(--font-data); font-size: 11px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 3px; width: 100%; cursor: pointer; }
+.code-filter-row select:focus { outline: none; border-color: var(--blue); }
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.fchip { font-family: var(--font-head); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 3px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; }
+.fchip:hover { color: var(--text); border-color: var(--blue); }
+.fchip.active { background: rgba(59,130,246,0.15); border-color: var(--blue); color: var(--blue); }
+#req-list { flex: 1; overflow-y: auto; }
+#req-list::-webkit-scrollbar { width: 4px; }
+#req-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.req-item { padding: 10px 14px; border-bottom: 1px solid rgba(30,45,69,0.5); cursor: pointer; transition: background .12s; }
+.req-item:hover { background: rgba(59,130,246,0.04); }
+.req-item.selected { background: rgba(59,130,246,0.1); border-left: 3px solid var(--blue); padding-left: 11px; }
+.req-item-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.req-num { font-family: var(--font-head); font-size: 12px; font-weight: 700; color: var(--muted); width: 24px; flex-shrink: 0; }
+.req-code { font-family: var(--font-data); font-size: 10px; color: var(--blue); }
+.req-text { font-size: 11px; color: var(--text); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.req-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.req-docs { font-size: 10px; color: var(--muted); }
+
+/* ── Badges ── */
+.badge { display: inline-block; font-family: var(--font-data); font-size: 9px; padding: 2px 6px; border-radius: 3px; white-space: nowrap; font-weight: 500; }
+.badge-missing  { background: rgba(239,68,68,0.18);  color: #FCA5A5; border: 1px solid rgba(239,68,68,0.3); }
+.badge-gap      { background: rgba(245,158,11,0.18); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
+.badge-open     { background: rgba(245,158,11,0.18); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
+.badge-answered { background: rgba(59,130,246,0.15); color: #93C5FD; border: 1px solid rgba(59,130,246,0.25); }
+.badge-reviewed { background: rgba(34,197,94,0.15);  color: #86EFAC; border: 1px solid rgba(34,197,94,0.25); }
+.badge-submitted{ background: rgba(59,130,246,0.1);  color: #93C5FD; border: 1px solid rgba(59,130,246,0.2); }
+.badge-clean    { background: var(--surface3); color: var(--muted); border: 1px solid var(--border); }
+.badge-fi       { background: rgba(59,130,246,0.08); color: #93C5FD; border: 1px solid rgba(59,130,246,0.15); font-size:8px; }
+.badge-ap       { background: rgba(245,158,11,0.08); color: #FCD34D; border: 1px solid rgba(245,158,11,0.15); font-size:8px; }
+.badge-open-t   { background: rgba(239,68,68,0.12);  color: #FCA5A5; border: 1px solid rgba(239,68,68,0.2); font-size:9px; }
+.badge-breach   { background: rgba(239,68,68,0.15);  color: #FCA5A5; border: 1px solid rgba(239,68,68,0.25); font-size:9px; }
+.badge-sla-ok   { background: rgba(34,197,94,0.12);  color: #86EFAC; border: 1px solid rgba(34,197,94,0.2);  font-size:9px; }
+.badge-sla-warn { background: rgba(245,158,11,0.12); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); font-size:9px; }
+
+/* ── Right panel ── */
+#right { display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── KPI bar ── */
+#kpi-bar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 0; flex-shrink: 0; }
+.kpi-cell { flex: 1; padding: 10px 16px; border-right: 1px solid var(--border); }
+.kpi-cell:last-child { border-right: none; }
+.kpi-v { font-family: var(--font-head); font-size: 24px; font-weight: 700; line-height: 1; }
+.kpi-l { font-family: var(--font-head); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+
+/* ── Right tab bar ── */
+#right-tabs { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 0; flex-shrink: 0; }
+.rtab { font-family: var(--font-head); font-size: 11px; font-weight: 600; letter-spacing: 0.5px; padding: 7px 18px; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; }
+.rtab:hover { color: var(--text); }
+.rtab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* ── Detail panel ── */
+#right-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+#right-detail { flex: 1; overflow-y: auto; padding: 20px 24px; display: none; }
+#right-detail::-webkit-scrollbar { width: 5px; }
+#right-detail::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Metrics panel ── */
+#right-metrics { flex: 1; overflow-y: auto; padding: 20px 24px; display: none; }
+#right-metrics::-webkit-scrollbar { width: 5px; }
+#right-metrics::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.metrics-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.m-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
+.m-card-title { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.m-stat-big { font-family: var(--font-head); font-size: 36px; font-weight: 700; line-height: 1; }
+.m-stat-sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.m-table { width: 100%; border-collapse: collapse; }
+.m-table td { padding: 5px 0; font-size: 11px; border-bottom: 1px solid rgba(30,45,69,0.4); }
+.m-table td:last-child { text-align: right; font-family: var(--font-head); font-weight: 700; }
+.m-table tr:last-child td { border-bottom: none; }
+.m-bar-wrap { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.m-bar-bg { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; }
+.m-bar-fill { height: 4px; border-radius: 2px; transition: width .3s; }
+.m-sla-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.m-sla-cell { text-align: center; }
+.m-sla-val { font-family: var(--font-head); font-size: 28px; font-weight: 700; }
+.m-sla-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ── Req detail header ── */
+.det-header { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.det-rule { font-family: var(--font-data); font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.det-title { font-family: var(--font-head); font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.det-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.det-desc { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 8px; }
+.det-crossref { font-size: 10px; color: var(--blue); font-family: var(--font-data); margin-top: 6px; padding: 4px 8px; background: rgba(59,130,246,.08); border-left: 2px solid var(--blue); border-radius: 2px; cursor: default; }
+
+/* ── Documents section ── */
+.sec-title { font-family: var(--font-head); font-size: 13px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.sec-title button { font-family: var(--font-head); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--blue); background: rgba(59,130,246,0.1); color: var(--blue); cursor: pointer; margin-left: auto; transition: background .15s; }
+.sec-title button:hover { background: rgba(59,130,246,0.2); }
+
+/* ── Document card (thin reference) ── */
+.doc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
+.doc-card-header { padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+.doc-num-link { font-family: var(--font-data); font-size: 12px; color: var(--blue); font-weight: 500; letter-spacing: 0.5px; }
+.doc-card-body { padding: 10px 14px; }
+.doc-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.btn-sm { font-family: var(--font-head); font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; }
+.btn-sm:hover { color: var(--text); border-color: var(--blue); }
+.btn-sm.primary { border-color: var(--blue); color: var(--blue); background: rgba(59,130,246,0.08); }
+.btn-sm.primary:hover { background: rgba(59,130,246,0.18); }
+.btn-sm.danger { border-color: var(--red); color: var(--red); }
+.btn-sm.danger:hover { background: rgba(239,68,68,0.1); }
+.btn-sm.success { border-color: var(--green); color: var(--green); }
+.btn-sm.success:hover { background: rgba(34,197,94,0.1); }
+
+/* ── Comment threads ── */
+.threads-section { border-top: 1px solid var(--border); padding-top: 10px; }
+.threads-title { font-family: var(--font-head); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.thread-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
+.thread-header { padding: 7px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.thread-round { font-family: var(--font-head); font-size: 10px; font-weight: 700; color: var(--muted); }
+.thread-cat { font-family: var(--font-head); font-size: 10px; color: var(--text); }
+.thread-date { font-size: 10px; color: var(--muted); margin-left: auto; }
+.thread-body { padding: 8px 10px; }
+.thread-block { margin-bottom: 8px; }
+.thread-block:last-child { margin-bottom: 0; }
+.thread-dir { font-family: var(--font-head); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
+.thread-dir.dnv { color: #93C5FD; }
+.thread-dir.bastion { color: #86EFAC; }
+.thread-text { font-size: 11px; color: var(--text); line-height: 1.5; white-space: pre-wrap; }
+.thread-text.empty { color: var(--muted); font-style: italic; }
+.thread-meta-row { display: flex; gap: 12px; margin-top: 6px; font-size: 10px; color: var(--muted); flex-wrap: wrap; }
+.thread-meta-row span { display: flex; gap: 4px; align-items: center; }
+.thread-footer { padding: 6px 10px; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); flex-wrap: wrap; }
+
+/* ── Inline forms ── */
+.inline-form { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 12px; margin-bottom: 10px; }
+.form-title { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--text); margin-bottom: 10px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-row.tri { grid-template-columns: 1fr 1fr 1fr; }
+.form-label { font-family: var(--font-head); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.form-label.required::after { content: ' *'; color: var(--amber); }
+.form-input { font-family: var(--font-data); font-size: 11px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 3px; width: 100%; resize: vertical; transition: border-color .15s; }
+.form-input:focus { outline: none; border-color: var(--blue); }
+.form-input.required-empty { border-color: var(--amber); }
+.form-select { font-family: var(--font-data); font-size: 11px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 3px; width: 100%; cursor: pointer; }
+.form-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ── Empty / loading states ── */
+.empty-state { text-align: center; padding: 30px; color: var(--muted); font-size: 11px; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a class="brand" href="/">DNV-BASTION INTERFACE <span>Document Requirements Compliance · Vanguard 02</span></a>
+  <div class="nav-links">
+    <a href="/" class="nav-btn">DASHBOARD</a>
+    <a href="/coordinator" class="nav-btn">COORDINATOR</a>
+    <a href="/docreq" class="nav-btn active">DOC REQUIREMENTS</a>
+    <a href="/exec" class="nav-btn">EXEC VIEW</a>
+    <a href="/reports" class="nav-btn">REPORTS</a>
+  </div>
+  <!-- Identity widget -->
+  <div id="identity-widget">
+    <div id="identity-display" class="unset" onclick="showIdentityEdit()">&#128100; SET YOUR NAME</div>
+    <div id="identity-form">
+      <input id="identity-input" placeholder="Your name" onkeydown="if(event.key==='Enter')saveIdentity();if(event.key==='Escape')hideIdentityEdit()">
+      <button id="identity-save" onclick="saveIdentity()">SAVE</button>
+      <button id="identity-cancel" onclick="hideIdentityEdit()">&#10005;</button>
+    </div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="body">
+
+  <!-- LEFT: Requirements list -->
+  <div id="left">
+    <div id="left-header">
+      <div class="left-title">
+        DNV Requirements
+        <button class="export-btn" onclick="exportFiltered()" title="Export filtered view as CSV">&#8595; CSV</button>
+      </div>
+      <div class="code-filter-row">
+        <select id="code-filter" onchange="setCodeFilter(this.value)">
+          <option value="">All DNV Codes</option>
+        </select>
+      </div>
+      <div class="filter-row">
+        <button class="fchip active" onclick="setFilter('all',this)">ALL</button>
+        <button class="fchip" onclick="setFilter('Open Comments',this)">OPEN</button>
+        <button class="fchip" onclick="setFilter('MISSING',this)">MISSING</button>
+        <button class="fchip" onclick="setFilter('Gap',this)">GAP</button>
+        <button class="fchip" onclick="setFilter('Submitted',this)">SUBMITTED</button>
+      </div>
+    </div>
+    <div id="req-list"></div>
+  </div>
+
+  <!-- RIGHT: Detail + Metrics -->
+  <div id="right">
+
+    <!-- KPI bar -->
+    <div id="kpi-bar">
+      <div class="kpi-cell"><div class="kpi-v" style="color:var(--blue)" id="k-total">—</div><div class="kpi-l">Requirements</div></div>
+      <div class="kpi-cell"><div class="kpi-v" style="color:var(--green)" id="k-reviewed">—</div><div class="kpi-l">Submitted</div></div>
+      <div class="kpi-cell"><div class="kpi-v" style="color:var(--amber)" id="k-open">—</div><div class="kpi-l">Open Comments</div></div>
+      <div class="kpi-cell"><div class="kpi-v" style="color:var(--amber)" id="k-gap">—</div><div class="kpi-l">Gap / No Doc</div></div>
+      <div class="kpi-cell"><div class="kpi-v" style="color:var(--red)" id="k-missing">—</div><div class="kpi-l">Missing</div></div>
+      <div class="kpi-cell"><div class="kpi-v" style="color:var(--red)" id="k-threads">—</div><div class="kpi-l">Open Threads</div></div>
+    </div>
+
+    <!-- Tab bar -->
+    <div id="right-tabs">
+      <button class="rtab active" onclick="showTab('detail')">DETAIL</button>
+      <button class="rtab" onclick="showTab('metrics')">METRICS</button>
+    </div>
+
+    <div id="right-empty">&#8592; Select a requirement to view details</div>
+
+    <!-- Detail panel -->
+    <div id="right-detail"></div>
+
+    <!-- Metrics panel -->
+    <div id="right-metrics">
+      <div id="metrics-content"><div class="empty-state">Loading metrics…</div></div>
+    </div>
+
+  </div>
+</div><!-- #body -->
+</div><!-- #shell -->
+
+<script>
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+let ALL_REQS = [];
+let CURRENT_REQ = null;
+let FILTER = 'all';
+let CODE_FILTER = '';
+let ACTIVE_TAB = 'detail';
+
+// ── Tab switching ─────────────────────────────────────────────────
+function showTab(tab) {
+  ACTIVE_TAB = tab;
+  document.querySelectorAll('.rtab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.rtab')[tab==='detail'?0:1].classList.add('active');
+  const det   = document.getElementById('right-detail');
+  const met   = document.getElementById('right-metrics');
+  const empty = document.getElementById('right-empty');
+  if (tab === 'metrics') {
+    empty.style.display   = 'none';
+    det.style.display     = 'none';
+    met.style.display     = 'block';
+    loadMetrics();
+  } else {
+    met.style.display = 'none';
+    if (CURRENT_REQ) {
+      empty.style.display = 'none';
+      det.style.display   = 'block';
+    } else {
+      empty.style.display = 'flex';
+      det.style.display   = 'none';
+    }
+  }
+}
+
+// ── Coverage badge ────────────────────────────────────────────────
+function covBadge(cov) {
+  const map = {
+    'MISSING':         ['badge-missing',   'MISSING'],
+    'Gap':             ['badge-gap',       'GAP'],
+    'Open Comments':   ['badge-open',      'OPEN COMMENTS'],
+    'Answered':        ['badge-answered',  'ANSWERED'],
+    'DNV Reviewed':    ['badge-reviewed',  'REVIEWED'],
+    'Submitted':       ['badge-submitted', 'SUBMITTED'],
+    'Satisfied':       ['badge-reviewed',  'SATISFIED'],
+    'Clean':           ['badge-clean',     'CLEAN'],
+  };
+  const [cls, label] = map[cov] || ['badge-clean', cov||'—'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function apBadge(ap) {
+  if (ap === 'AP') return `<span class="badge badge-ap">FOR APPROVAL</span>`;
+  if (ap === 'FI') return `<span class="badge badge-fi">FOR INFORMATION</span>`;
+  return '';
+}
+
+function dispBadge(d) {
+  const map = {
+    'Open':     ['badge-open',     'OPEN'],
+    'Answered': ['badge-answered', 'ANSWERED'],
+    'Accepted': ['badge-reviewed', 'ACCEPTED'],
+    'Rejected': ['badge-missing',  'REJECTED'],
+  };
+  const [cls, label] = map[d] || ['badge-clean', d||'—'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function slaBadge(sla) {
+  if (!sla) return '';
+  if (sla.bd_to_response !== null && sla.bd_to_response !== undefined) {
+    const bd = sla.bd_to_response;
+    const cls = bd > 10 ? 'badge-breach' : bd > 7 ? 'badge-sla-warn' : 'badge-sla-ok';
+    return `<span class="badge ${cls}">${bd}bd / 10bd SLA</span>`;
+  }
+  if (sla.bd_open !== null && sla.bd_open !== undefined) {
+    const bd = sla.bd_open;
+    const cls = bd > 10 ? 'badge-breach' : bd > 7 ? 'badge-sla-warn' : 'badge-sla-ok';
+    return `<span class="badge ${cls}">${bd}bd open</span>`;
+  }
+  return '';
+}
+
+// ── KPI bar ───────────────────────────────────────────────────────
+function renderKPIs(reqs) {
+  const total    = reqs.length;
+  const submitted = reqs.filter(r=>['Submitted','DNV Reviewed','Satisfied'].includes(r.coverage_status)).length;
+  const openC    = reqs.filter(r=>r.coverage_status==='Open Comments').length;
+  const gap      = reqs.filter(r=>r.coverage_status==='Gap').length;
+  const missing  = reqs.filter(r=>r.coverage_status==='MISSING').length;
+  const threads  = reqs.reduce((s,r)=>s+(r.open_threads||0), 0);
+  document.getElementById('k-total').textContent    = total;
+  document.getElementById('k-reviewed').textContent = submitted;
+  document.getElementById('k-open').textContent     = openC;
+  document.getElementById('k-gap').textContent      = gap;
+  document.getElementById('k-missing').textContent  = missing;
+  document.getElementById('k-threads').textContent  = threads;
+}
+
+// ── Code filter dropdown ──────────────────────────────────────────
+function populateCodeFilter(reqs) {
+  const sel = document.getElementById('code-filter');
+  const codes = [...new Set(reqs.map(r=>r.dnv_code||'').filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All DNV Codes</option>' +
+    codes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+function setCodeFilter(code) {
+  CODE_FILTER = code;
+  renderList();
+}
+
+function setFilter(f, btn) {
+  FILTER = f;
+  document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+function applyFilters(reqs) {
+  let out = reqs;
+  if (CODE_FILTER) out = out.filter(r => r.dnv_code === CODE_FILTER);
+  if (FILTER !== 'all') out = out.filter(r => r.coverage_status === FILTER);
+  return out;
+}
+
+function renderList() {
+  const filtered = applyFilters(ALL_REQS);
+  document.getElementById('req-list').innerHTML = filtered.length
+    ? filtered.map(r => `
+      <div class="req-item${CURRENT_REQ && CURRENT_REQ.id===r.id?' selected':''}"
+           onclick="loadReq(${r.id})">
+        <div class="req-item-top">
+          <span class="req-num">${esc(r.item_number||'')}</span>
+          <span class="req-code">${esc(r.dnv_code||'')}</span>
+          ${apBadge(r.approval_type)}
+        </div>
+        <div class="req-text">${esc(r.requirement_text||'')}</div>
+        <div class="req-meta">
+          ${covBadge(r.coverage_status)}
+          <span class="req-docs">${r.doc_count||0} doc${r.doc_count!==1?'s':''}</span>
+          ${r.open_threads>0?`<span class="badge badge-open-t">${r.open_threads} open</span>`:''}
+        </div>
+      </div>`).join('')
+    : `<div class="empty-state">No requirements match this filter.</div>`;
+}
+
+// ── Export filtered view ──────────────────────────────────────────
+function exportFiltered() {
+  const params = new URLSearchParams();
+  if (CODE_FILTER) params.set('dnv_code', CODE_FILTER);
+  if (FILTER !== 'all') params.set('coverage', FILTER);
+  window.location.href = '/api/docreq/export?' + params.toString();
+}
+
+// ── Load requirement detail ───────────────────────────────────────
+async function loadReq(id) {
+  const res = await fetch(`/api/docreq/requirements/${id}`);
+  CURRENT_REQ = await res.json();
+  renderList();
+  if (ACTIVE_TAB === 'detail') {
+    document.getElementById('right-empty').style.display = 'none';
+    document.getElementById('right-detail').style.display = 'block';
+  }
+  renderDetail(CURRENT_REQ);
+}
+
+// ── Detail panel ──────────────────────────────────────────────────
+function renderDetail(req) {
+  const det  = document.getElementById('right-detail');
+  const docs = req.documents || [];
+
+  det.innerHTML = `
+    <div class="det-header">
+      <div class="det-rule">DNV-RU-UWT ${esc(req.rule_ref||'Pt.5 Ch.10 Sec.1')} &middot; Item ${esc(req.item_number||'')} &middot; Code ${esc(req.dnv_code||'')}</div>
+      <div class="det-title">${esc(req.requirement_text||'')}</div>
+      <div class="det-meta">
+        ${apBadge(req.approval_type)}
+        ${covBadge(req.coverage_status)}
+        <span style="font-size:10px;color:var(--muted)">${docs.length} document${docs.length!==1?'s':''} linked</span>
+      </div>
+      ${req.paragraph_ref ? `<div class="det-crossref" title="${esc(req.ref_source||'')}">&#x21AA; Compliance map row ${esc(req.paragraph_ref)} &mdash; <span style="opacity:.7">${esc(req.ref_source||'')}</span></div>` : ''}
+      ${req.additional_description && req.additional_description!=='nan'
+        ? `<div class="det-desc">${esc(req.additional_description)}</div>` : ''}
+    </div>
+
+    <div class="sec-title">
+      Bastion Documents
+      <button onclick="toggleAddDoc()">+ LINK DOCUMENT</button>
+    </div>
+
+    <!-- Add document form -->
+    <div id="add-doc-form" class="inline-form" style="display:none">
+      <div class="form-title">LINK BASTION DOCUMENT TO THIS REQUIREMENT</div>
+      <div class="form-row full">
+        <div>
+          <div class="form-label required">Document Number (DDM)</div>
+          <input class="form-input" id="nd-num" placeholder="VA2-0003XXX" autocomplete="off">
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">
+        Document metadata (title, owner, status, revision) is managed on the Submissions page.
+      </div>
+      <div class="form-actions">
+        <button class="btn-sm primary" onclick="submitAddDoc(${req.id})">LINK</button>
+        <button class="btn-sm" onclick="toggleAddDoc()">CANCEL</button>
+      </div>
+    </div>
+
+    <div id="docs-container">
+      ${docs.length
+        ? docs.map(d => renderDocCard(d, req.id)).join('')
+        : `<div class="empty-state">No documents linked yet.<br>Click + LINK DOCUMENT to associate a Bastion document.</div>`}
+    </div>
+  `;
+}
+
+// ── Document card (thin reference) ───────────────────────────────
+function renderDocCard(d, reqId) {
+  const threads = d.threads || [];
+  const openT   = threads.filter(t=>t.disposition==='Open').length;
+  const openThread = threads.find(t=>t.disposition==='Open');
+
+  return `
+  <div class="doc-card" id="doc-${d.id}">
+    <div class="doc-card-header">
+      <span class="doc-num-link">${esc(d.doc_number||'—')}</span>
+      <span style="flex:1;font-size:10px;color:var(--muted)">Bastion submission reference</span>
+      ${covBadge(d.comment_status)}
+      ${openT>0?`<span class="badge badge-open-t">${openT} open thread${openT!==1?'s':''}</span>`:''}
+      <button class="btn-sm danger" onclick="deleteDoc(${d.id},${reqId})">UNLINK</button>
+    </div>
+    <div class="doc-card-body">
+      <div class="doc-actions">
+        <button class="btn-sm primary" onclick="showAddThread(${d.id})">+ DNV COMMENT</button>
+        ${openThread
+          ? `<button class="btn-sm success" onclick="showResponseForm(${d.id},${openThread.id})">&#8629; LOG RESPONSE</button>`
+          : ''}
+        <a href="/coordinator" style="margin-left:auto;font-family:var(--font-head);font-size:11px;font-weight:600;padding:4px 12px;border-radius:4px;border:1px solid var(--border);color:var(--muted);text-decoration:none;">VIEW SUBMISSION</a>
+      </div>
+
+      <!-- Add DNV comment form -->
+      <div id="thread-form-${d.id}" style="display:none" class="inline-form">
+        <div class="form-title">LOG DNV COMMENT &mdash; Round ${threads.length+1}</div>
+        <div class="form-row tri">
+          <div>
+            <div class="form-label required">Category</div>
+            <select class="form-select" id="tc-cat-${d.id}">
+              <option>Technical</option>
+              <option>Administrative</option>
+              <option>Missing Info</option>
+              <option>Clarification</option>
+              <option>Compliance</option>
+            </select>
+          </div>
+          <div>
+            <div class="form-label">DNV Comment Date</div>
+            <input type="date" class="form-input" id="tc-date-${d.id}" value="${new Date().toISOString().split('T')[0]}">
+          </div>
+          <div>
+            <div class="form-label">Assigned To</div>
+            <input class="form-input" id="tc-assigned-${d.id}" placeholder="Name">
+          </div>
+        </div>
+        <div class="form-row full">
+          <div>
+            <div class="form-label required">DNV Comment Text</div>
+            <textarea class="form-input" id="tc-text-${d.id}" rows="4" placeholder="Paste or type DNV comment here&hellip;"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm primary" onclick="submitComment(${d.id},${reqId})">SAVE COMMENT</button>
+          <button class="btn-sm" onclick="document.getElementById('thread-form-${d.id}').style.display='none'">CANCEL</button>
+        </div>
+      </div>
+
+      <!-- Log Bastion response form -->
+      <div id="resp-form-${d.id}" style="display:none" class="inline-form">
+        <div class="form-title" id="resp-title-${d.id}">LOG BASTION RESPONSE</div>
+        <div class="form-row full">
+          <div>
+            <div class="form-label required">Bastion Response</div>
+            <textarea class="form-input" id="resp-text-${d.id}" rows="4" placeholder="Document Bastion response to the DNV comment&hellip;"></textarea>
+          </div>
+        </div>
+        <div class="form-row tri">
+          <div>
+            <div class="form-label">Disposition</div>
+            <select class="form-select" id="resp-disp-${d.id}">
+              <option value="Answered">Answered &mdash; awaiting DNV</option>
+              <option value="Accepted">Accepted &mdash; DNV closed</option>
+              <option value="Rejected">Rejected &mdash; new round needed</option>
+            </select>
+          </div>
+          <div>
+            <div class="form-label">Response Date</div>
+            <input type="date" class="form-input" id="resp-date-${d.id}" value="${new Date().toISOString().split('T')[0]}">
+          </div>
+          <div>
+            <div class="form-label">Assigned To</div>
+            <input class="form-input" id="resp-assigned-${d.id}" placeholder="Responder name">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm primary" onclick="submitResponse(${d.id},${reqId})">SAVE RESPONSE</button>
+          <button class="btn-sm" onclick="document.getElementById('resp-form-${d.id}').style.display='none'">CANCEL</button>
+        </div>
+        <input type="hidden" id="resp-thread-${d.id}" value="">
+      </div>
+
+      <!-- Comment threads -->
+      ${threads.length ? `
+      <div class="threads-section">
+        <div class="threads-title">Comment Threads (${threads.length} round${threads.length!==1?'s':''})</div>
+        ${threads.map(t => `
+        <div class="thread-item" id="thread-${t.id}">
+          <div class="thread-header">
+            <span class="thread-round">Round ${t.round}</span>
+            <span class="thread-cat">${esc(t.category||'')}</span>
+            ${dispBadge(t.disposition)}
+            ${slaBadge(t.sla)}
+            <span class="thread-date">${esc(t.dnv_comment_date||'')}</span>
+          </div>
+          <div class="thread-body">
+            <div class="thread-block">
+              <div class="thread-dir dnv">DNV &rarr;</div>
+              <div class="thread-text${!t.dnv_comment?' empty':''}">${t.dnv_comment?esc(t.dnv_comment):'No comment text recorded.'}</div>
+              ${t.assigned_to ? `
+              <div class="thread-meta-row">
+                <span>Assigned: <strong style="color:var(--text)">${esc(t.assigned_to)}</strong></span>
+                ${t.assigned_date?`<span>${esc(t.assigned_date)}</span>`:''}
+              </div>` : ''}
+            </div>
+            ${t.bastion_response ? `
+            <div class="thread-block">
+              <div class="thread-dir bastion">BASTION &#8629; <span style="font-size:9px;color:var(--muted)">${esc(t.bastion_response_date||'')}</span></div>
+              <div class="thread-text">${esc(t.bastion_response)}</div>
+            </div>` : `
+            <div class="thread-block">
+              <div class="thread-dir bastion">BASTION &#8629;</div>
+              <div class="thread-text empty">No response logged yet.</div>
+            </div>`}
+            ${t.disposition==='Accepted' ? `
+            <div class="thread-meta-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+              ${t.dnv_approver?`<span>DNV Approver: <strong style="color:var(--green)">${esc(t.dnv_approver)}</strong></span>`:''}
+              ${t.dnv_closed_date?`<span>Closed: <strong style="color:var(--green)">${esc(t.dnv_closed_date)}</strong></span>`:''}
+            </div>` : ''}
+          </div>
+          <div class="thread-footer">
+            ${t.disposition==='Open'?`<button class="btn-sm success" onclick="showResponseForm(${d.id},${t.id})">&#8629; RESPOND</button>`:''}
+            ${t.disposition==='Answered'?`
+              <button class="btn-sm success" onclick="showAcceptForm(${t.id},${d.id},${reqId})">&#10003; MARK ACCEPTED</button>
+              <button class="btn-sm danger"  onclick="quickDispose(${t.id},'Rejected',${d.id},${reqId})">&#10007; REJECTED</button>`:''}
+            <button class="btn-sm danger" style="margin-left:auto" onclick="deleteThread(${t.id},${d.id},${reqId})">DELETE</button>
+          </div>
+          <!-- Accept form (hidden) -->
+          <div id="accept-form-${t.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:rgba(34,197,94,0.04)" class="inline-form">
+            <div class="form-title" style="color:var(--green)">MARK DNV ACCEPTED</div>
+            <div class="form-row">
+              <div>
+                <div class="form-label">DNV Approver</div>
+                <input class="form-input" id="accept-approver-${t.id}" placeholder="Approver name">
+              </div>
+              <div>
+                <div class="form-label">DNV Closed Date</div>
+                <input type="date" class="form-input" id="accept-date-${t.id}" value="${new Date().toISOString().split('T')[0]}">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-sm success" onclick="submitAccept(${t.id},${d.id},${reqId})">CONFIRM ACCEPTED</button>
+              <button class="btn-sm" onclick="document.getElementById('accept-form-${t.id}').style.display='none'">CANCEL</button>
+            </div>
+          </div>
+        </div>`).join('')}
+      </div>` : ''}
+
+    </div><!-- doc-card-body -->
+  </div><!-- doc-card -->`;
+}
+
+// ── Metrics panel ─────────────────────────────────────────────────
+async function loadMetrics() {
+  try {
+    const res  = await fetch('/api/docreq/metrics');
+    const m    = await res.json();
+    const cont = document.getElementById('metrics-content');
+
+    const cov  = m.coverage || {};
+    const covOrder = ['MISSING','Gap','Open Comments','Answered','Submitted','DNV Reviewed'];
+    const covColors = {'MISSING':'var(--red)','Gap':'var(--amber)','Open Comments':'var(--amber)',
+                       'Answered':'var(--blue)','Submitted':'var(--blue)','DNV Reviewed':'var(--green)'};
+    const total = m.total_requirements || 1;
+
+    const aging = m.aging || {};
+    const agingColors = {'0-5 bd':'var(--green)','6-10 bd':'var(--amber)','11-20 bd':'#f97316','20+ bd':'var(--red)'};
+    const maxAging = Math.max(1, ...Object.values(aging));
+
+    const cats = m.categories || {};
+    const maxCat = Math.max(1, ...Object.values(cats));
+
+    const codes = m.dnv_codes || {};
+
+    cont.innerHTML = `
+    <!-- Row 1: SLA + Coverage -->
+    <div class="metrics-grid">
+
+      <!-- SLA Performance -->
+      <div class="m-card" style="grid-column:span 2">
+        <div class="m-card-title">SLA Performance &mdash; 10 Business Day Target</div>
+        <div class="m-sla-row">
+          <div class="m-sla-cell">
+            <div class="m-sla-val" style="color:${m.sla_pct>=80?'var(--green)':m.sla_pct>=60?'var(--amber)':'var(--red)'}">${m.sla_pct!==null&&m.sla_pct!==undefined?m.sla_pct+'%':'—'}</div>
+            <div class="m-sla-lbl">Within SLA</div>
+          </div>
+          <div class="m-sla-cell">
+            <div class="m-sla-val" style="color:var(--blue)">${m.sla_within_10bd||0}</div>
+            <div class="m-sla-lbl">Responses On Time</div>
+          </div>
+          <div class="m-sla-cell">
+            <div class="m-sla-val" style="color:${m.sla_breach>0?'var(--red)':'var(--muted)'}">${m.sla_breach||0}</div>
+            <div class="m-sla-lbl">Breached</div>
+          </div>
+          <div class="m-sla-cell">
+            <div class="m-sla-val" style="color:var(--text)">${m.avg_response_bd!==null&&m.avg_response_bd!==undefined?m.avg_response_bd+'bd':'—'}</div>
+            <div class="m-sla-lbl">Avg Response Time</div>
+          </div>
+          <div class="m-sla-cell">
+            <div class="m-sla-val" style="color:${m.open_threads>0?'var(--amber)':'var(--muted)'}">${m.open_threads||0}</div>
+            <div class="m-sla-lbl">Open Threads</div>
+          </div>
+          <div class="m-sla-cell">
+            <div class="m-sla-val" style="color:var(--text)">${m.total_threads||0}</div>
+            <div class="m-sla-lbl">Total Threads</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coverage Breakdown -->
+      <div class="m-card">
+        <div class="m-card-title">Coverage Status</div>
+        <table class="m-table">
+          ${covOrder.map(k => cov[k]!==undefined ? `
+          <tr>
+            <td><span class="badge ${covBadge(k).match(/badge-[a-z]+/)?.[0]||''}">${k}</span></td>
+            <td style="color:${covColors[k]||'var(--text)'}">${cov[k]}</td>
+          </tr>` : '').join('')}
+        </table>
+      </div>
+    </div>
+
+    <!-- Row 2: Aging + Categories + DNV Codes -->
+    <div class="metrics-grid">
+
+      <!-- Open Thread Aging -->
+      <div class="m-card">
+        <div class="m-card-title">Open Thread Aging</div>
+        ${Object.entries(aging).map(([k,v])=>`
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span>${k}</span><span style="color:${agingColors[k]||'var(--text)'}">${''+v}</span>
+          </div>
+          <div class="m-bar-bg"><div class="m-bar-fill" style="width:${Math.round(v/maxAging*100)}%;background:${agingColors[k]||'var(--blue)'}"></div></div>
+        </div>`).join('')}
+      </div>
+
+      <!-- Comment Categories -->
+      <div class="m-card">
+        <div class="m-card-title">Comment Categories</div>
+        ${Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span>${esc(k)}</span><span style="color:var(--blue)">${''+v}</span>
+          </div>
+          <div class="m-bar-bg"><div class="m-bar-fill" style="width:${Math.round(v/maxCat*100)}%;background:var(--blue)"></div></div>
+        </div>`).join('') || '<div style="color:var(--muted);font-size:11px">No threads yet.</div>'}
+      </div>
+
+      <!-- DNV Code Distribution -->
+      <div class="m-card">
+        <div class="m-card-title">DNV Code Distribution (${Object.keys(codes).length} codes)</div>
+        <div style="max-height:200px;overflow-y:auto">
+          <table class="m-table">
+            ${Object.entries(codes).map(([k,v])=>`
+            <tr>
+              <td style="font-family:var(--font-data);font-size:10px;color:var(--blue)">${esc(k)}</td>
+              <td>${v}</td>
+            </tr>`).join('')}
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Row 3: Dispositions -->
+    <div class="metrics-grid-2">
+      <div class="m-card">
+        <div class="m-card-title">Thread Dispositions</div>
+        <table class="m-table">
+          ${Object.entries(m.dispositions||{}).map(([k,v])=>`
+          <tr><td>${dispBadge(k)}</td><td style="color:var(--text)">${v}</td></tr>`).join('') || '<tr><td colspan="2" style="color:var(--muted)">No threads yet.</td></tr>'}
+        </table>
+      </div>
+      <div class="m-card">
+        <div class="m-card-title">Requirements Summary</div>
+        <div class="m-sla-row" style="grid-template-columns:repeat(2,1fr);gap:12px">
+          <div class="m-sla-cell"><div class="m-sla-val" style="color:var(--blue)">${total}</div><div class="m-sla-lbl">Total Requirements</div></div>
+          <div class="m-sla-cell"><div class="m-sla-val" style="color:var(--green)">${(cov['Submitted']||0)+(cov['DNV Reviewed']||0)+(cov['Answered']||0)}</div><div class="m-sla-lbl">Active Coverage</div></div>
+          <div class="m-sla-cell"><div class="m-sla-val" style="color:var(--red)">${cov['MISSING']||0}</div><div class="m-sla-lbl">No Document</div></div>
+          <div class="m-sla-cell"><div class="m-sla-val" style="color:var(--amber)">${cov['Gap']||0}</div><div class="m-sla-lbl">Gap</div></div>
+        </div>
+      </div>
+    </div>`;
+  } catch(e) {
+    document.getElementById('metrics-content').innerHTML =
+      `<div class="empty-state">Error loading metrics: ${esc(String(e))}</div>`;
+  }
+}
+
+// ── UI interactions ───────────────────────────────────────────────
+function toggleAddDoc() {
+  const f = document.getElementById('add-doc-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('nd-num').focus();
+}
+
+function showAddThread(docId) {
+  document.querySelectorAll('[id^="thread-form-"]').forEach(el=>el.style.display='none');
+  document.getElementById(`thread-form-${docId}`).style.display = 'block';
+}
+
+function showResponseForm(docId, threadId) {
+  document.querySelectorAll('[id^="resp-form-"]').forEach(el=>el.style.display='none');
+  document.getElementById(`resp-thread-${docId}`).value = threadId;
+  document.getElementById(`resp-form-${docId}`).style.display = 'block';
+  document.getElementById(`resp-text-${docId}`).focus();
+}
+
+function showAcceptForm(threadId, docId, reqId) {
+  document.querySelectorAll('[id^="accept-form-"]').forEach(el=>el.style.display='none');
+  document.getElementById(`accept-form-${threadId}`).style.display = 'block';
+  document.getElementById(`accept-approver-${threadId}`).focus();
+}
+
+// ── API calls ─────────────────────────────────────────────────────
+async function submitAddDoc(reqId) {
+  const doc_number = document.getElementById('nd-num').value.trim();
+  if (!doc_number) {
+    document.getElementById('nd-num').classList.add('required-empty');
+    document.getElementById('nd-num').focus();
+    return;
+  }
+  await fetch(`/api/docreq/requirements/${reqId}/documents`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ doc_number })
+  });
+  loadReq(reqId);
+}
+
+async function deleteDoc(docId, reqId) {
+  if (!confirm('Unlink this document from the requirement?')) return;
+  await fetch(`/api/docreq/documents/${docId}`, { method: 'DELETE' });
+  loadReq(reqId);
+}
+
+async function submitComment(docId, reqId) {
+  const cat  = document.getElementById(`tc-cat-${docId}`).value;
+  const text = document.getElementById(`tc-text-${docId}`).value.trim();
+  const date = document.getElementById(`tc-date-${docId}`).value;
+  const asgn = document.getElementById(`tc-assigned-${docId}`)?.value.trim() || '';
+  if (!text) {
+    const el = document.getElementById(`tc-text-${docId}`);
+    el.classList.add('required-empty'); el.focus(); return;
+  }
+  await fetch(`/api/docreq/documents/${docId}/comments`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      category: cat,
+      dnv_comment: text,
+      dnv_comment_date: date,
+      assigned_to: asgn,
+      assigned_date: date,
+      disposition: 'Open',
+    })
+  });
+  loadReq(reqId);
+}
+
+async function submitResponse(docId, reqId) {
+  const threadId = document.getElementById(`resp-thread-${docId}`).value;
+  const text  = document.getElementById(`resp-text-${docId}`).value.trim();
+  const date  = document.getElementById(`resp-date-${docId}`).value;
+  const disp  = document.getElementById(`resp-disp-${docId}`).value;
+  const asgn  = document.getElementById(`resp-assigned-${docId}`)?.value.trim() || '';
+  if (!text) {
+    const el = document.getElementById(`resp-text-${docId}`);
+    el.classList.add('required-empty'); el.focus(); return;
+  }
+  await fetch(`/api/docreq/comments/${threadId}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      bastion_response: text,
+      bastion_response_date: date,
+      assigned_to: asgn,
+      disposition: disp,
+    })
+  });
+  loadReq(reqId);
+}
+
+async function submitAccept(threadId, docId, reqId) {
+  const approver = document.getElementById(`accept-approver-${threadId}`).value.trim();
+  const closed   = document.getElementById(`accept-date-${threadId}`).value;
+  await fetch(`/api/docreq/comments/${threadId}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      disposition: 'Accepted',
+      dnv_approver: approver,
+      dnv_closed_date: closed,
+    })
+  });
+  loadReq(reqId);
+}
+
+async function quickDispose(threadId, disposition, docId, reqId) {
+  await fetch(`/api/docreq/comments/${threadId}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({disposition})
+  });
+  loadReq(reqId);
+}
+
+async function deleteThread(threadId, docId, reqId) {
+  if (!confirm('Delete this comment thread?')) return;
+  await fetch(`/api/docreq/comments/${threadId}`, { method: 'DELETE' });
+  loadReq(reqId);
+}
+
+async function refreshList() {
+  const res = await fetch('/api/docreq/requirements');
+  ALL_REQS  = await res.json();
+  renderKPIs(ALL_REQS);
+  renderList();
+}
+
+// ── Identity ──────────────────────────────────────────────────────
+let CURRENT_USER = '';
+
+async function loadIdentity() {
+  try {
+    const res  = await fetch('/api/identity');
+    const data = await res.json();
+    CURRENT_USER = data.name || '';
+    updateIdentityWidget();
+  } catch(e) {}
+}
+
+function updateIdentityWidget() {
+  const disp = document.getElementById('identity-display');
+  if (CURRENT_USER) {
+    disp.innerHTML = `&#128100; ${esc(CURRENT_USER)} <span style="font-size:9px;color:var(--muted)">&#9998;</span>`;
+    disp.classList.remove('unset');
+  } else {
+    disp.innerHTML = '&#128100; SET YOUR NAME';
+    disp.classList.add('unset');
+  }
+}
+
+function showIdentityEdit() {
+  document.getElementById('identity-display').style.display = 'none';
+  const form  = document.getElementById('identity-form');
+  const input = document.getElementById('identity-input');
+  form.style.display  = 'flex';
+  input.value = CURRENT_USER;
+  input.focus();
+  input.select();
+}
+
+function hideIdentityEdit() {
+  document.getElementById('identity-display').style.display = 'flex';
+  document.getElementById('identity-form').style.display    = 'none';
+}
+
+async function saveIdentity() {
+  const name = document.getElementById('identity-input').value.trim();
+  await fetch('/api/identity', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name})
+  });
+  CURRENT_USER = name;
+  updateIdentityWidget();
+  hideIdentityEdit();
+}
+
+// Auto-fill assigned_to when opening forms
+const _origShowAddThread = showAddThread;
+showAddThread = function(docId) {
+  _origShowAddThread(docId);
+  const el = document.getElementById(`tc-assigned-${docId}`);
+  if (el && !el.value && CURRENT_USER) el.value = CURRENT_USER;
+};
+
+const _origShowResponseForm = showResponseForm;
+showResponseForm = function(docId, threadId) {
+  _origShowResponseForm(docId, threadId);
+  const el = document.getElementById(`resp-assigned-${docId}`);
+  if (el && !el.value && CURRENT_USER) el.value = CURRENT_USER;
+};
+
+// ── Boot ──────────────────────────────────────────────────────────
+async function boot() {
+  await loadIdentity();
+  const res = await fetch('/api/docreq/requirements');
+  ALL_REQS  = await res.json();
+  populateCodeFilter(ALL_REQS);
+  renderKPIs(ALL_REQS);
+  renderList();
+}
+
+boot();
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV BASTION · SCHEDULE IMPACT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #2563EB;
+  --blue-lt:  #60A5FA;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text);
+  font-family: var(--font-data); font-size: 13px; line-height: 1.4; overflow: hidden; }
+
+#shell { display: grid; grid-template-rows: 48px 40px 1fr; height: 100vh; overflow: hidden; }
+
+/* ── TOPBAR ── */
+#topbar { background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+#topbar .brand { font-family: var(--font-head); font-size: 18px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+#topbar .brand span { color: var(--muted); font-weight: 400; }
+#topbar .page-tag { font-family: var(--font-head); font-size: 13px; font-weight: 600;
+  letter-spacing: .1em; color: var(--amber); text-transform: uppercase;
+  padding: 3px 10px; border: 1px solid rgba(245,158,11,.35);
+  border-radius: 3px; white-space: nowrap; }
+#topbar .spacer { flex: 1; }
+.btn { font-family: var(--font-head); font-size: 13px; font-weight: 700;
+  letter-spacing: .1em; padding: 5px 14px; border-radius: 3px; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap; background: none; border: 1px solid var(--muted);
+  color: var(--muted); transition: all .15s; }
+.btn:hover { border-color: var(--text); color: var(--text); }
+.btn.primary { border-color: var(--blue); color: var(--blue-lt); }
+.btn.primary:hover { background: rgba(37,99,235,.15); }
+.btn.amber { border-color: var(--amber); color: var(--amber); }
+.btn.amber:hover { background: rgba(245,158,11,.12); }
+
+/* ── FILTER BAR ── */
+#filterbar { background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 10px; }
+.filter-input { font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 10px; border-radius: 3px; width: 220px; outline: none; }
+.filter-input:focus { border-color: var(--blue); }
+.filter-select { font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 3px; outline: none; cursor: pointer; }
+.filter-sep { flex: 1; }
+.toggle-chip { font-family: var(--font-head); font-size: 12px; font-weight: 600;
+  letter-spacing: .08em; padding: 3px 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--muted); color: var(--muted); background: none;
+  transition: all .15s; }
+.toggle-chip.active { border-color: var(--amber); color: var(--amber);
+  background: rgba(245,158,11,.12); }
+.stat-pill { font-family: var(--font-head); font-size: 11px; font-weight: 600;
+  letter-spacing: .08em; padding: 2px 8px; border-radius: 10px; }
+.stat-pill.breach { background: rgba(239,68,68,.15); color: var(--red); }
+.stat-pill.risk    { background: rgba(245,158,11,.15); color: var(--amber); }
+.stat-pill.watch   { background: rgba(96,165,250,.12); color: var(--blue-lt); }
+.stat-pill.ok      { background: rgba(34,197,94,.10);  color: var(--green); }
+.stat-pill.unknown { background: rgba(107,114,128,.15); color: var(--muted); }
+
+/* ── MAIN SPLIT ── */
+#main { display: grid; grid-template-columns: 1fr 360px; overflow: hidden; }
+
+/* ── TABLE PANE ── */
+#table-pane { overflow-y: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table thead tr { background: var(--surface); position: sticky; top: 0; z-index: 10; }
+.data-table th { padding: 7px 10px; text-align: left; font-family: var(--font-head);
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--muted);
+  text-transform: uppercase; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table td { padding: 7px 10px; border-bottom: 1px solid rgba(30,45,69,.6);
+  vertical-align: middle; white-space: nowrap; }
+.data-table tbody tr { cursor: pointer; transition: background .1s; }
+.data-table tbody tr:hover { background: rgba(26,34,52,.8); }
+.data-table tbody tr.selected { background: rgba(37,99,235,.12);
+  border-left: 3px solid var(--blue); }
+
+/* Risk level left-border coding */
+.data-table tbody tr.risk-BREACH td:first-child { border-left: 3px solid var(--red); }
+.data-table tbody tr.risk-RISK   td:first-child { border-left: 3px solid var(--amber); }
+.data-table tbody tr.risk-WATCH  td:first-child { border-left: 3px solid var(--blue-lt); }
+.data-table tbody tr.risk-OK     td:first-child { border-left: 3px solid transparent; }
+
+.risk-badge { font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  letter-spacing: .1em; padding: 2px 8px; border-radius: 3px; display: inline-block; }
+.risk-badge.BREACH  { background: rgba(239,68,68,.18); color: var(--red); }
+.risk-badge.RISK    { background: rgba(245,158,11,.18); color: var(--amber); }
+.risk-badge.WATCH   { background: rgba(96,165,250,.15); color: var(--blue-lt); }
+.risk-badge.OK      { background: rgba(34,197,94,.12);  color: var(--green); }
+.risk-badge.UNKNOWN { background: rgba(107,114,128,.15); color: var(--muted); }
+
+.milestone-flag { font-size: 10px; color: var(--amber); margin-left: 4px; }
+.witness-flag   { font-size: 10px; color: var(--red);   margin-left: 4px; }
+.link-badge { display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--blue-lt); background: rgba(96,165,250,.1);
+  border-radius: 10px; padding: 1px 7px; margin-left: 4px; }
+
+.wbs-cell { font-family: var(--font-data); color: var(--muted); font-size: 11px; }
+.name-cell { max-width: 340px; overflow: hidden; text-overflow: ellipsis; }
+.date-cell { color: var(--muted); font-size: 11px; }
+.pct-cell  { color: var(--muted); font-size: 11px; text-align: right; }
+.bd-cell   { text-align: right; font-variant-numeric: tabular-nums; }
+
+.empty-state { padding: 48px; text-align: center; color: var(--muted); }
+.empty-state h3 { font-family: var(--font-head); font-size: 18px; margin-bottom: 8px; }
+
+/* ── DETAIL SIDEBAR ── */
+#detail-pane { background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden; }
+#detail-pane.empty { align-items: center; justify-content: center; color: var(--muted); }
+#detail-pane.empty p { font-family: var(--font-head); font-size: 14px; text-align: center;
+  padding: 24px; opacity: .5; }
+
+.detail-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+.detail-header .d-wbs { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.detail-header .d-name { font-family: var(--font-head); font-size: 16px; font-weight: 600;
+  line-height: 1.2; color: var(--text); }
+.detail-header .d-badges { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+.detail-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.detail-section { margin-bottom: 18px; }
+.detail-section h4 { font-family: var(--font-head); font-size: 12px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+
+.detail-row { display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; font-size: 12px; border-bottom: 1px solid rgba(30,45,69,.4); }
+.detail-row:last-child { border-bottom: none; }
+.detail-row .lbl { color: var(--muted); }
+.detail-row .val { text-align: right; color: var(--text); }
+
+.doc-link-row { display: flex; align-items: center; gap: 6px; padding: 5px 0;
+  border-bottom: 1px solid rgba(30,45,69,.4); font-size: 12px; }
+.doc-link-row:last-child { border-bottom: none; }
+.doc-link-row .doc-num { font-family: var(--font-data); font-size: 11px; color: var(--blue-lt);
+  min-width: 120px; }
+.doc-link-row .doc-status { flex: 1; }
+.doc-link-row .remove-btn { font-size: 10px; color: var(--muted); cursor: pointer;
+  padding: 2px 6px; border: 1px solid transparent; border-radius: 3px;
+  background: none; transition: all .15s; }
+.doc-link-row .remove-btn:hover { border-color: var(--red); color: var(--red); }
+
+.sub-status { font-family: var(--font-head); font-size: 10px; font-weight: 600;
+  letter-spacing: .06em; padding: 1px 6px; border-radius: 3px; }
+.sub-status.Draft              { background:rgba(107,114,128,.15); color:var(--muted); }
+.sub-status.Internal-Review    { background:rgba(37,99,235,.15);   color:var(--blue-lt); }
+.sub-status.Submitted-to-DNV   { background:rgba(245,158,11,.15);  color:var(--amber); }
+.sub-status.Under-DNV-Review   { background:rgba(245,158,11,.15);  color:var(--amber); }
+.sub-status.Comments-Issued    { background:rgba(239,68,68,.15);   color:var(--red); }
+.sub-status.Response-Submitted { background:rgba(37,99,235,.15);   color:var(--blue-lt); }
+.sub-status.Closed             { background:rgba(34,197,94,.12);   color:var(--green); }
+
+.link-add-row { display: flex; gap: 6px; margin-top: 8px; }
+.link-add-row input { flex: 1; font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 3px; outline: none; }
+.link-add-row input:focus { border-color: var(--blue); }
+.link-add-row button { font-family: var(--font-head); font-size: 12px; font-weight: 700;
+  padding: 4px 12px; border-radius: 3px; cursor: pointer; background: none;
+  border: 1px solid var(--blue); color: var(--blue-lt); transition: all .15s; }
+.link-add-row button:hover { background: rgba(37,99,235,.15); }
+
+/* ── IMPORT OVERLAY ── */
+#import-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: none; align-items: center; justify-content: center; z-index: 100; }
+#import-modal { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 24px 28px; width: 460px; max-width: 95vw; }
+#import-modal h3 { font-family: var(--font-head); font-size: 18px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px; }
+#import-modal .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.import-option { padding: 12px 14px; border: 1px solid var(--border); border-radius: 4px;
+  margin-bottom: 10px; cursor: pointer; transition: border-color .15s; }
+.import-option:hover { border-color: var(--blue-lt); }
+.import-option h4 { font-family: var(--font-head); font-size: 14px; font-weight: 600;
+  margin-bottom: 2px; }
+.import-option p { font-size: 11px; color: var(--muted); }
+.file-drop { border: 2px dashed var(--border); border-radius: 4px; padding: 20px;
+  text-align: center; color: var(--muted); margin-bottom: 14px; }
+.file-drop.drag-over { border-color: var(--blue); color: var(--blue-lt); }
+.file-drop input { display: none; }
+.file-drop label { cursor: pointer; }
+#import-status { margin-top: 10px; padding: 8px 12px; border-radius: 4px;
+  font-size: 12px; display: none; }
+#import-status.ok  { display: block; background: rgba(34,197,94,.12);  color: var(--green); }
+#import-status.err { display: block; background: rgba(239,68,68,.12);  color: var(--red); }
+.import-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
+/* ── IMPORT INFO BAR ── */
+#import-bar { font-size: 11px; color: var(--muted); padding: 0 14px;
+  display: flex; align-items: center; gap: 8px; }
+#import-bar .ib-label { color: var(--muted); }
+#import-bar .ib-val   { color: var(--text); }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="brand">DNV BASTION <span>PORTAL</span></div>
+    <div class="page-tag">SCHEDULE IMPACT</div>
+    <div id="import-bar">
+      <span class="ib-label">Last import:</span>
+      <span class="ib-val" id="ib-date">—</span>
+      <span class="ib-label">·</span>
+      <span class="ib-val" id="ib-tasks">— tasks</span>
+    </div>
+    <div class="spacer"></div>
+    <a href="/" class="btn">← Dashboard</a>
+    <a href="/submissions" class="btn">Submissions</a>
+    <button class="btn amber" id="btn-import" style="display:none" onclick="openImport()">↑ Import Schedule</button>
+    <div id="user-chip"></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div id="filterbar">
+    <input id="search" class="filter-input" placeholder="Search tasks…" oninput="applyFilters()">
+    <select id="sel-phase" class="filter-select" onchange="applyFilters()">
+      <option value="">All Phases</option>
+    </select>
+    <select id="sel-risk" class="filter-select" onchange="applyFilters()">
+      <option value="">All Risk Levels</option>
+      <option value="BREACH">BREACH</option>
+      <option value="RISK">RISK</option>
+      <option value="WATCH">WATCH</option>
+      <option value="OK">OK</option>
+    </select>
+    <button class="toggle-chip active" id="chip-dnv" onclick="toggleDNVOnly()">DNV Only</button>
+    <div class="filter-sep"></div>
+    <span class="stat-pill breach" id="cnt-breach" style="display:none"></span>
+    <span class="stat-pill risk"   id="cnt-risk"   style="display:none"></span>
+    <span class="stat-pill watch"  id="cnt-watch"  style="display:none"></span>
+    <span class="stat-pill ok"     id="cnt-ok"     style="display:none"></span>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- TABLE PANE -->
+    <div id="table-pane">
+      <div id="empty-state" class="empty-state" style="display:none">
+        <h3>No Schedule Data</h3>
+        <p style="color:var(--muted);margin-top:8px;font-size:12px">
+          Import a schedule JSON to populate this view.
+        </p>
+      </div>
+      <table class="data-table" id="task-table">
+        <thead>
+          <tr>
+            <th style="width:80px">WBS</th>
+            <th>Task Name</th>
+            <th style="width:90px">Start</th>
+            <th style="width:90px">Finish</th>
+            <th style="width:44px; text-align:right">%</th>
+            <th style="width:70px; text-align:right">Lead (BD)</th>
+            <th style="width:80px">Risk</th>
+          </tr>
+        </thead>
+        <tbody id="task-body"></tbody>
+      </table>
+    </div>
+
+    <!-- DETAIL SIDEBAR -->
+    <div id="detail-pane" class="empty">
+      <p>Select a task<br>to see details</p>
+    </div>
+
+  </div><!-- #main -->
+</div><!-- #shell -->
+
+<!-- IMPORT OVERLAY -->
+<div id="import-overlay">
+  <div id="import-modal">
+    <h3>Import Schedule</h3>
+    <p class="subtitle">Upload a schedule_raw.json file, or auto-load from server.</p>
+
+    <!-- Auto-load option -->
+    <div class="import-option" onclick="doAutoLoad()">
+      <h4>⟳ Auto-load from server</h4>
+      <p>Loads <code>state/schedule_raw.json</code> already on the server (run the MPP extractor first).</p>
+    </div>
+
+    <!-- Upload option -->
+    <div class="file-drop" id="file-drop"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event)">
+      <input type="file" id="file-pick" accept=".mpp,.mpt,.json" onchange="handleFilePick(event)">
+      <label for="file-pick">
+        ↑ Drop <strong>.mpp</strong> or .json here, or <u>click to browse</u>
+      </label>
+      <div style="margin-top:4px;font-size:10px;color:var(--muted)">
+        MS Project .mpp is converted automatically on the server
+      </div>
+      <div id="file-name" style="margin-top:6px;font-size:11px;color:var(--blue-lt)"></div>
+    </div>
+
+    <div id="import-status"></div>
+
+    <div class="import-footer">
+      <button class="btn" onclick="closeImport()">Cancel</button>
+      <button class="btn primary" id="btn-do-upload" style="display:none" onclick="doUpload()">Upload & Import</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   SCHEDULE IMPACT — client script
+═══════════════════════════════════════════════════════ */
+
+let _allTasks    = [];
+let _subStatus   = {};  // doc_number → status
+let _selectedId  = null;
+let _dnvOnly     = true;
+let _selectedLinks = [];
+let _pendingFile = null;
+
+// ── Boot ──────────────────────────────────────────────
+function _waitForIdentity(cb, tries = 0) {
+  const id = window.getIdentity ? window.getIdentity() : null;
+  if (id && id.name && id.role) { cb(id); return; }
+  if (tries > 30) { cb({}); return; }
+  setTimeout(() => _waitForIdentity(cb, tries + 1), 100);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  _waitForIdentity(id => {
+    // Show import button only for coordinators/admins
+    if (id.role === 'Bastion Coordinator' || id.role === 'Admin') {
+      document.getElementById('btn-import').style.display = 'inline-flex';
+    }
+    boot();
+  });
+});
+
+async function boot() {
+  await loadStatus();
+  await loadSubmissionStatuses();
+  await loadTasks();
+}
+
+// ── Load last-import status ───────────────────────────
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/schedule/status');
+    const d = await r.json();
+    const li = d.last_import;
+    if (li) {
+      const dt = window.formatTS ? window.formatTS(li.imported_at, {dateOnly: true}) : li.imported_at.slice(0,10);
+      document.getElementById('ib-date').textContent  = dt;
+      document.getElementById('ib-tasks').textContent = `${li.task_count} tasks · ${d.dnv_count} DNV-tagged`;
+    } else {
+      document.getElementById('ib-date').textContent  = 'Never';
+      document.getElementById('ib-tasks').textContent = 'No data';
+    }
+  } catch(e) { /* non-fatal */ }
+}
+
+// ── Load submissions for status lookup ────────────────
+async function loadSubmissionStatuses() {
+  try {
+    const r = await fetch('/api/csv/submissions');
+    const rows = await r.json();
+    _subStatus = {};
+    rows.forEach(row => {
+      const dn = (row.DocumentNumber || '').trim();
+      if (dn) _subStatus[dn] = row.Status || '';
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
+// ── Load tasks ────────────────────────────────────────
+async function loadTasks() {
+  try {
+    const url = `/api/schedule/tasks?dnv_only=${_dnvOnly ? 1 : 0}`;
+    const r   = await fetch(url);
+    _allTasks = await r.json();
+
+    // Build phase dropdown from top-level WBS segments
+    buildPhaseOptions();
+    applyFilters();
+  } catch(e) {
+    document.getElementById('task-body').innerHTML =
+      `<tr><td colspan="7" style="color:var(--red);padding:20px">
+        Failed to load tasks. Have you imported a schedule yet?
+      </td></tr>`;
+  }
+}
+
+// ── Phase dropdown ────────────────────────────────────
+function buildPhaseOptions() {
+  const phases = new Set();
+  _allTasks.forEach(t => {
+    const parts = (t.wbs || '').split('.');
+    if (parts.length >= 2) phases.add(`${parts[0]}.${parts[1]}`);
+  });
+  const sel = document.getElementById('sel-phase');
+  sel.innerHTML = '<option value="">All Phases</option>';
+  [...phases].sort().forEach(p => {
+    const o = document.createElement('option');
+    o.value = o.textContent = p;
+    sel.appendChild(o);
+  });
+}
+
+// ── Filters ───────────────────────────────────────────
+function applyFilters() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const phase  = document.getElementById('sel-phase').value;
+  const risk   = document.getElementById('sel-risk').value;
+
+  const filtered = _allTasks.filter(t => {
+    if (search && !(t.name || '').toLowerCase().includes(search) &&
+                  !(t.wbs  || '').toLowerCase().includes(search)) return false;
+    if (phase && !(t.wbs || '').startsWith(phase)) return false;
+    if (risk  && t.risk_level !== risk) return false;
+    return true;
+  });
+
+  renderTable(filtered);
+  renderCounts(filtered);
+}
+
+// ── Toggle DNV-only ───────────────────────────────────
+function toggleDNVOnly() {
+  _dnvOnly = !_dnvOnly;
+  document.getElementById('chip-dnv').classList.toggle('active', _dnvOnly);
+  loadTasks();
+}
+
+// ── Render table ──────────────────────────────────────
+function renderTable(tasks) {
+  const body  = document.getElementById('task-body');
+  const empty = document.getElementById('empty-state');
+  const table = document.getElementById('task-table');
+
+  if (tasks.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    table.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  table.style.display = '';
+
+  body.innerHTML = tasks.map(t => {
+    const rl   = t.risk_level || 'UNKNOWN';
+    const sel  = _selectedId === t.id ? 'selected' : '';
+    const bd   = t.lead_time_bd != null ? t.lead_time_bd : '—';
+    const bdCl = t.lead_time_bd != null && t.lead_time_bd < 0 ? 'style="color:var(--red)"' : '';
+    const msFlag = t.milestone  ? '<span class="milestone-flag" title="Milestone">◆</span>' : '';
+    const wtFlag = t.dnv_witness ? '<span class="witness-flag" title="DNV Witness/Inspection">●</span>' : '';
+    const lkBadge = t.link_count > 0
+      ? `<span class="link-badge">⬡ ${t.link_count}</span>` : '';
+
+    return `<tr class="risk-${rl} ${sel}"
+              data-id="${t.id}" onclick="selectTask(${t.id})">
+      <td class="wbs-cell">${esc(t.wbs)}</td>
+      <td class="name-cell">${esc(t.name)}${msFlag}${wtFlag}${lkBadge}</td>
+      <td class="date-cell">${fmtDate(t.start_dt)}</td>
+      <td class="date-cell">${fmtDate(t.finish_dt)}</td>
+      <td class="pct-cell">${Math.round(t.pct || 0)}%</td>
+      <td class="bd-cell" ${bdCl}>${bd}</td>
+      <td><span class="risk-badge ${rl}">${rl}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Render count pills ────────────────────────────────
+function renderCounts(tasks) {
+  const counts = { BREACH: 0, RISK: 0, WATCH: 0, OK: 0 };
+  tasks.forEach(t => { if (counts[t.risk_level] != null) counts[t.risk_level]++; });
+  [['breach','BREACH'], ['risk','RISK'], ['watch','WATCH'], ['ok','OK']].forEach(([cls, key]) => {
+    const el = document.getElementById(`cnt-${cls}`);
+    if (counts[key] > 0) {
+      el.textContent = `${key} ${counts[key]}`;
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+// ── Select task ───────────────────────────────────────
+async function selectTask(id) {
+  _selectedId = id;
+  // Re-highlight row
+  document.querySelectorAll('#task-body tr').forEach(tr => {
+    tr.classList.toggle('selected', parseInt(tr.dataset.id) === id);
+  });
+  const task = _allTasks.find(t => t.id === id);
+  if (!task) return;
+
+  // Load links
+  try {
+    const r = await fetch(`/api/schedule/tasks/${id}/links`);
+    _selectedLinks = await r.json();
+  } catch(e) { _selectedLinks = []; }
+
+  renderDetail(task);
+}
+
+// ── Render sidebar ────────────────────────────────────
+function renderDetail(t) {
+  const pane = document.getElementById('detail-pane');
+  pane.className = '';
+
+  const rl   = t.risk_level || 'UNKNOWN';
+  const bd   = t.lead_time_bd != null ? `${t.lead_time_bd} bd` : '—';
+  const bdColor = t.lead_time_bd != null && t.lead_time_bd < 0 ? 'var(--red)' :
+                  t.lead_time_bd != null && t.lead_time_bd <= 15 ? 'var(--amber)' : 'var(--text)';
+  const msFlag = t.milestone   ? ' <span class="milestone-flag" title="Milestone">◆ MILESTONE</span>' : '';
+  const wtFlag = t.dnv_witness ? ' <span class="witness-flag"   title="DNV Witness">● WITNESS</span>' : '';
+
+  const linksHtml = _selectedLinks.length === 0
+    ? '<p style="color:var(--muted);font-size:11px;padding:4px 0">No submissions linked.</p>'
+    : _selectedLinks.map(lk => {
+        const st  = _subStatus[lk.doc_number] || 'UNKNOWN';
+        const stc = st.replace(/\s+/g, '-');
+        const closed = ['Closed','Complete','Completed','Done'].includes(st);
+        const warn = !closed && t.lead_time_bd != null && t.lead_time_bd <= 21
+          ? '<span style="color:var(--amber);font-size:10px;margin-left:4px">⚠</span>' : '';
+        return `<div class="doc-link-row">
+          <span class="doc-num">${esc(lk.doc_number)}</span>
+          <span class="doc-status"><span class="sub-status ${stc}">${esc(st)}</span>${warn}</span>
+          <button class="remove-btn" onclick="removeLink(${t.id},'${esc(lk.doc_number)}')" title="Unlink">✕</button>
+        </div>`;
+      }).join('');
+
+  // Only show link-add for coordinator/admin
+  const id = window.getIdentity ? window.getIdentity() : {};
+  const canLink = id.role === 'Bastion Coordinator' || id.role === 'Admin' ||
+                  id.role === 'Bastion Engineer';
+  const addHtml = canLink
+    ? `<div class="link-add-row">
+         <input id="new-doc" placeholder="Document number…" onkeydown="if(event.key==='Enter')addLink()">
+         <button onclick="addLink()">Link</button>
+       </div>` : '';
+
+  pane.innerHTML = `
+    <div class="detail-header">
+      <div class="d-wbs">${esc(t.wbs)}</div>
+      <div class="d-name">${esc(t.name)}${msFlag}${wtFlag}</div>
+      <div class="d-badges">
+        <span class="risk-badge ${rl}">${rl}</span>
+        <span style="font-family:var(--font-head);font-size:12px;color:${bdColor}">${bd} to start</span>
+      </div>
+    </div>
+    <div class="detail-body">
+
+      <div class="detail-section">
+        <h4>Schedule</h4>
+        <div class="detail-row"><span class="lbl">Start</span>
+          <span class="val">${fmtDate(t.start_dt)}</span></div>
+        <div class="detail-row"><span class="lbl">Finish</span>
+          <span class="val">${fmtDate(t.finish_dt)}</span></div>
+        <div class="detail-row"><span class="lbl">% Complete</span>
+          <span class="val">${Math.round(t.pct || 0)}%</span></div>
+        <div class="detail-row"><span class="lbl">Lead time</span>
+          <span class="val" style="color:${bdColor};font-weight:600">${bd}</span></div>
+        ${t.resources ? `<div class="detail-row"><span class="lbl">Resources</span>
+          <span class="val" style="max-width:180px;text-align:right;white-space:normal;font-size:11px">${esc(t.resources)}</span></div>` : ''}
+      </div>
+
+      <div class="detail-section">
+        <h4>Linked Submissions <span style="color:var(--muted);font-weight:400">(${_selectedLinks.length})</span></h4>
+        ${linksHtml}
+        ${addHtml}
+      </div>
+
+      ${t.notes ? `<div class="detail-section">
+        <h4>Notes</h4>
+        <p style="font-size:11px;color:var(--muted);white-space:pre-wrap">${esc(t.notes)}</p>
+      </div>` : ''}
+
+      <div class="detail-section" style="margin-top:auto">
+        <h4>Lead-Time Guide</h4>
+        <div class="detail-row"><span class="lbl" style="color:var(--red)">BREACH</span>
+          <span class="val" style="color:var(--muted);font-size:11px">At or past start date</span></div>
+        <div class="detail-row"><span class="lbl" style="color:var(--amber)">RISK</span>
+          <span class="val" style="color:var(--muted);font-size:11px">≤ 15 bd — action required</span></div>
+        <div class="detail-row"><span class="lbl" style="color:var(--blue-lt)">WATCH</span>
+          <span class="val" style="color:var(--muted);font-size:11px">≤ 21 bd — start planning</span></div>
+        <div class="detail-row"><span class="lbl" style="color:var(--green)">OK</span>
+          <span class="val" style="color:var(--muted);font-size:11px">> 21 bd</span></div>
+      </div>
+
+    </div>
+  `;
+}
+
+// ── Link management ───────────────────────────────────
+async function addLink() {
+  const inp = document.getElementById('new-doc');
+  const doc = (inp.value || '').trim();
+  if (!doc || !_selectedId) return;
+
+  const r = await fetch(`/api/schedule/tasks/${_selectedId}/links`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ doc_number: doc })
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Failed to add link'); return; }
+  inp.value = '';
+
+  // Refresh
+  await selectTask(_selectedId);
+  // Update link_count in _allTasks
+  const t = _allTasks.find(t => t.id === _selectedId);
+  if (t) { t.link_count = _selectedLinks.length; applyFilters(); }
+}
+
+async function removeLink(taskId, docNum) {
+  const r = await fetch(`/api/schedule/tasks/${taskId}/links/${encodeURIComponent(docNum)}`,
+    { method: 'DELETE' });
+  if (!r.ok) { alert('Failed to remove link'); return; }
+  await selectTask(taskId);
+  const t = _allTasks.find(t => t.id === taskId);
+  if (t) { t.link_count = _selectedLinks.length; applyFilters(); }
+}
+
+// ── Import ────────────────────────────────────────────
+function openImport() {
+  document.getElementById('import-overlay').style.display = 'flex';
+  document.getElementById('import-status').style.display  = 'none';
+  document.getElementById('file-name').textContent = '';
+  document.getElementById('btn-do-upload').style.display = 'none';
+  _pendingFile = null;
+}
+function closeImport() {
+  document.getElementById('import-overlay').style.display = 'none';
+}
+
+function handleFilePick(e) {
+  const f = e.target.files[0];
+  if (f) {
+    _pendingFile = f;
+    document.getElementById('file-name').textContent = f.name;
+    document.getElementById('btn-do-upload').style.display = '';
+  }
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('file-drop').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    _pendingFile = f;
+    document.getElementById('file-name').textContent = f.name;
+    document.getElementById('btn-do-upload').style.display = '';
+  }
+}
+
+function _setImportStatus(msg, cls) {
+  const el = document.getElementById('import-status');
+  el.textContent   = msg;
+  el.className     = cls;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function doAutoLoad() {
+  _setImportStatus('Loading from server…', '');
+  try {
+    const r = await fetch('/api/schedule/import', { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok) { _setImportStatus(d.error || 'Import failed', 'err'); return; }
+    _setImportStatus(
+      `Loaded ${d.task_count} tasks · ${d.dnv_count} DNV-tagged · ${d.witness_count} witness events`,
+      'ok'
+    );
+    setTimeout(() => { closeImport(); boot(); }, 1400);
+  } catch(e) { _setImportStatus('Network error', 'err'); }
+}
+
+async function doUpload() {
+  if (!_pendingFile) return;
+  const fd = new FormData();
+  fd.append('file', _pendingFile);
+  _setImportStatus('Uploading…', '');
+  try {
+    const r = await fetch('/api/schedule/import', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) { _setImportStatus(d.error || 'Import failed', 'err'); return; }
+    _setImportStatus(
+      `Imported ${d.task_count} tasks · ${d.dnv_count} DNV-tagged · ${d.witness_count} witness events`,
+      'ok'
+    );
+    setTimeout(() => { closeImport(); boot(); }, 1400);
+  } catch(e) { _setImportStatus('Network error', 'err'); }
+}
+
+// Close overlay on outside click
+document.getElementById('import-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeImport();
+});
+
+// ── Helpers ───────────────────────────────────────────
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  // Normalise to UTC: plain dates get midnight UTC, datetime strings without offset get Z appended
+  let norm = s;
+  if (s.length === 10) {
+    norm = s + 'T00:00:00Z';
+  } else if (!s.endsWith('Z') && !s.includes('+') && !/[0-9]T[0-9].*-[0-9]/.test(s)) {
+    norm = s + 'Z';
+  }
+  const d = new Date(norm);
+  if (isNaN(d)) return s.slice(0,10);
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', timeZone:'UTC' });
+}
+</script>
+</body>
+</html>

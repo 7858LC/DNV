@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV–Bastion Coordinator — Software Datasheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:    #1F3864;
+  --blue:    #2563EB;
+  --bg:      #F2F4F8;
+  --surface: #FFFFFF;
+  --border:  #C8D3E8;
+  --text:    #1E2D45;
+  --muted:   #7A8BA8;
+  --green:   #16A34A;
+  --amber:   #D97706;
+  --red:     #DC2626;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-head);
+  font-size: 13px;
+  padding: 0;
+}
+
+/* ── Print / no-print ── */
+.no-print { }
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .page { box-shadow: none; margin: 0; }
+  .section { break-inside: avoid; }
+}
+
+/* ── Nav ── */
+#topnav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-head);
+}
+.back-btn {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  text-decoration: none; padding: 4px 10px;
+  border: 1px solid var(--border); border-radius: 4px;
+  transition: all .15s;
+}
+.back-btn:hover { color: var(--blue); border-color: var(--blue); }
+.print-btn {
+  margin-left: auto;
+  font-family: var(--font-head); font-size: 12px; font-weight: 600;
+  padding: 5px 16px; border-radius: 4px;
+  border: 1px solid var(--blue); background: rgba(37,99,235,0.08);
+  color: var(--blue); cursor: pointer; transition: all .15s;
+}
+.print-btn:hover { background: rgba(37,99,235,0.15); }
+
+/* ── Page wrapper ── */
+#wrapper { max-width: 900px; margin: 32px auto; padding: 0 24px 60px; }
+
+/* ── Document header ── */
+.doc-header {
+  background: var(--navy);
+  color: #fff;
+  border-radius: 8px 8px 0 0;
+  padding: 32px 36px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.doc-title { font-size: 28px; font-weight: 800; letter-spacing: 1px; line-height: 1.1; }
+.doc-subtitle { font-size: 14px; font-weight: 400; opacity: 0.7; margin-top: 4px; font-family: var(--font-data); }
+.doc-meta { text-align: right; font-family: var(--font-data); font-size: 11px; opacity: 0.8; line-height: 1.8; }
+.doc-meta .version { font-size: 18px; font-weight: 700; font-family: var(--font-head); opacity: 1; color: #93C5FD; letter-spacing: 1px; }
+.doc-stripe {
+  height: 6px;
+  background: linear-gradient(90deg, #2563EB 0%, #16A34A 50%, #D97706 100%);
+}
+
+/* ── Page body ── */
+.page {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 32px 36px;
+  box-shadow: 0 2px 12px rgba(30,45,69,0.08);
+}
+
+/* ── Sections ── */
+.section { margin-bottom: 32px; }
+.section:last-child { margin-bottom: 0; }
+.sec-head {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--navy);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--navy);
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sec-head::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 14px;
+  background: var(--blue);
+  border-radius: 2px;
+}
+
+/* ── Two-column layout ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+/* ── Spec table ── */
+.spec-table { width: 100%; border-collapse: collapse; }
+.spec-table tr { border-bottom: 1px solid var(--bg); }
+.spec-table tr:last-child { border-bottom: none; }
+.spec-table td { padding: 7px 10px; font-size: 12px; vertical-align: top; }
+.spec-table td:first-child {
+  width: 38%;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  padding-left: 0;
+}
+.spec-table td:last-child { font-family: var(--font-data); color: var(--text); }
+.spec-table tr:nth-child(even) td { background: var(--bg); }
+.spec-table tr:nth-child(even) td:first-child { background: var(--bg); }
+
+/* ── Version badge ── */
+.ver-badge {
+  display: inline-block;
+  font-family: var(--font-data); font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 3px;
+  background: rgba(37,99,235,0.09); color: #1E40AF;
+  border: 1px solid rgba(37,99,235,0.2);
+}
+
+/* ── Module cards ── */
+.module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.module-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--blue);
+}
+.module-card.green  { border-left-color: var(--green); }
+.module-card.amber  { border-left-color: var(--amber); }
+.module-card.navy   { border-left-color: var(--navy); }
+.module-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.module-route { font-family: var(--font-data); font-size: 10px; color: var(--blue); margin-bottom: 5px; }
+.module-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* ── Dep table ── */
+.dep-table { width: 100%; border-collapse: collapse; }
+.dep-table th {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 6px 10px; border-bottom: 2px solid var(--border);
+  text-align: left;
+}
+.dep-table td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid var(--bg); }
+.dep-table td:nth-child(2) { font-family: var(--font-data); color: var(--blue); font-weight: 500; }
+.dep-table tr:last-child td { border-bottom: none; }
+
+/* ── Data model boxes ── */
+.db-schema { background: var(--bg); border-radius: 6px; padding: 14px 16px; font-family: var(--font-data); font-size: 11px; line-height: 1.8; color: var(--text); }
+.db-schema .table-name { font-weight: 700; color: var(--navy); font-size: 12px; }
+.db-schema .field { color: var(--muted); padding-left: 16px; }
+.db-schema .field em { color: var(--blue); font-style: normal; }
+
+/* ── Tag pills ── */
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag {
+  font-family: var(--font-data); font-size: 10px; font-weight: 500;
+  padding: 3px 8px; border-radius: 3px;
+  background: var(--bg); color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* ── Footer ── */
+.doc-footer {
+  margin-top: 32px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-data);
+}
+</style>
+</head>
+<body>
+
+<!-- Top nav (screen only) -->
+<div id="topnav" class="no-print">
+  <a href="/" class="back-btn">&#8592; Dashboard</a>
+  <span style="font-family:var(--font-head);font-size:13px;font-weight:600;color:var(--muted)">Software Datasheet</span>
+  <button class="print-btn" onclick="window.print()">&#8595; PRINT / SAVE PDF</button>
+</div>
+
+<div id="wrapper">
+
+<!-- Document header -->
+<div class="doc-header">
+  <div>
+    <div class="doc-title">DNV–BASTION COORDINATOR</div>
+    <div class="doc-subtitle">Compliance Management System &nbsp;·&nbsp; Software Datasheet</div>
+  </div>
+  <div class="doc-meta">
+    <div class="version">v1.0.0</div>
+    <div>Sentinel 001 &nbsp;·&nbsp; Vanguard 02</div>
+    <div id="sheet-date">—</div>
+    <div>INTERNAL USE</div>
+  </div>
+</div>
+<div class="doc-stripe"></div>
+
+<div class="page">
+
+  <!-- 1. Purpose -->
+  <div class="section">
+    <div class="sec-head">Purpose &amp; Scope</div>
+    <p style="font-size:13px;line-height:1.7;color:var(--text)">
+      The DNV–Bastion Coordinator is an internal web-based compliance management system purpose-built
+      to track Bastion Technologies' document submission workflow against DNV GL qualification requirements
+      for <strong>Sentinel 001 (Vanguard 02)</strong> under <strong>DNV-RU-UWT Pt.5 Ch.10 Sec.1</strong>.
+      It manages the full lifecycle from DNV document requirement definition through Bastion document
+      submission, multi-round DNV comment exchange, SLA tracking, and final qualification acceptance.
+    </p>
+    <div class="tags">
+      <span class="tag">DNV-RU-UWT</span>
+      <span class="tag">Pt.5 Ch.10 Sec.1</span>
+      <span class="tag">Document Control</span>
+      <span class="tag">SLA Tracking</span>
+      <span class="tag">Compliance Management</span>
+      <span class="tag">Multi-user LAN</span>
+      <span class="tag">No cloud dependency</span>
+    </div>
+  </div>
+
+  <!-- 2. Software Stack -->
+  <div class="section">
+    <div class="sec-head">Software Stack</div>
+    <div class="two-col">
+      <div>
+        <table class="spec-table">
+          <tr><td>Runtime</td><td>Python 3.14.4</td></tr>
+          <tr><td>Web Framework</td><td>Flask 3.1.3</td></tr>
+          <tr><td>WSGI Server</td><td>Werkzeug 3.1.8</td></tr>
+          <tr><td>Database</td><td>SQLite 3 (WAL mode)</td></tr>
+          <tr><td>Data Layer</td><td>pandas 3.0.2</td></tr>
+          <tr><td>Numerical</td><td>NumPy 2.4.4</td></tr>
+        </table>
+      </div>
+      <div>
+        <table class="spec-table">
+          <tr><td>Excel I/O</td><td>openpyxl 3.1.5</td></tr>
+          <tr><td>PDF Generation</td><td>ReportLab 4.4.10</td></tr>
+          <tr><td>App Version</td><td>1.0.0</td></tr>
+          <tr><td>Config Format</td><td>JSON (config.json)</td></tr>
+          <tr><td>Notifications</td><td>MS Teams webhook</td></tr>
+          <tr><td>Fonts</td><td>Barlow Condensed · IBM Plex Mono</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. System Requirements -->
+  <div class="section">
+    <div class="sec-head">System Requirements</div>
+    <div class="two-col">
+      <div>
+        <table class="spec-table">
+          <tr><td>Host OS</td><td>Windows 10 / 11 (64-bit)</td></tr>
+          <tr><td>Python</td><td>3.10 or higher</td></tr>
+          <tr><td>RAM</td><td>4 GB minimum · 8 GB recommended</td></tr>
+          <tr><td>Disk</td><td>~200 MB (app + data + uploads)</td></tr>
+          <tr><td>Network port</td><td>TCP 5000 inbound (configurable)</td></tr>
+        </table>
+      </div>
+      <div>
+        <table class="spec-table">
+          <tr><td>Client browsers</td><td>Chrome, Edge, Safari, Firefox</td></tr>
+          <tr><td>Client devices</td><td>Desktop, tablet, mobile (responsive)</td></tr>
+          <tr><td>LAN access</td><td>All devices on same network / Tailscale VPN</td></tr>
+          <tr><td>Internet</td><td>Required for Google Fonts only</td></tr>
+          <tr><td>Cloud services</td><td>None — fully local data storage</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Application Modules -->
+  <div class="section">
+    <div class="sec-head">Application Modules</div>
+    <div class="module-grid">
+      <div class="module-card navy">
+        <div class="module-name">Dashboard</div>
+        <div class="module-route">/ &nbsp;&nbsp; /exec</div>
+        <div class="module-desc">Live KPI summary — submissions, TQ log, action tracker, audit readiness, DocReq coverage. Executive management view auto-refreshes every 2 min.</div>
+      </div>
+      <div class="module-card">
+        <div class="module-name">Doc Requirements (DocReq)</div>
+        <div class="module-route">/docreq</div>
+        <div class="module-desc">Master-detail compliance tracker. 139 DNV requirements seeded from DNV-RU-UWT. Links Bastion documents, tracks multi-round comment threads with 10bd SLA enforcement.</div>
+      </div>
+      <div class="module-card green">
+        <div class="module-name">Submissions Coordinator</div>
+        <div class="module-route">/coordinator</div>
+        <div class="module-desc">Full submission register — document status, DNV workflow state, revision tracking, file attachments, PDM import via SolidWorks CSV export.</div>
+      </div>
+      <div class="module-card amber">
+        <div class="module-name">TQ Log</div>
+        <div class="module-route">/coordinator → TQ tab</div>
+        <div class="module-desc">Technical Query register with SLA forecast. Tracks open / closed TQs, response age, breach risk. PDF export with forecast chart.</div>
+      </div>
+      <div class="module-card">
+        <div class="module-name">Action Tracker</div>
+        <div class="module-route">/coordinator → Actions tab</div>
+        <div class="module-desc">Open action items with owner, due date, priority, and status. Amber/red ageing indicators. Filterable by owner and status.</div>
+      </div>
+      <div class="module-card green">
+        <div class="module-name">Reports</div>
+        <div class="module-route">/reports</div>
+        <div class="module-desc">Four PDF-exportable report tabs: SLA Breach Forecast, Interface Health Scorecard, Audit Readiness, DNV Doc Requirements Coverage.</div>
+      </div>
+      <div class="module-card amber">
+        <div class="module-name">Kanban Board</div>
+        <div class="module-route">/kanban</div>
+        <div class="module-desc">Visual workflow board for document states. Drag-and-drop card management. Filtered by document type and owner.</div>
+      </div>
+      <div class="module-card navy">
+        <div class="module-name">SLA Digest</div>
+        <div class="module-route">sla_digest.py · /api/admin/sla-digest</div>
+        <div class="module-desc">Daily Teams webhook notification. Posts breach (10+ bd) and warning (8+ bd) open threads to configured MS Teams channel. Schedulable via Windows Task Scheduler.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Data Architecture -->
+  <div class="section">
+    <div class="sec-head">Data Architecture</div>
+    <div class="two-col">
+      <div>
+        <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">SQLite Database &nbsp;<span style="font-family:var(--font-data);font-size:10px">state/docreq.db</span></p>
+        <div class="db-schema">
+          <div class="table-name">dnv_requirements</div>
+          <div class="field">id, item_number, rule_ref, dnv_code</div>
+          <div class="field">requirement_text, additional_description</div>
+          <div class="field">approval_type, subsystem</div>
+          <br>
+          <div class="table-name">bastion_documents</div>
+          <div class="field">id, <em>requirement_id</em> FK, doc_number</div>
+          <br>
+          <div class="table-name">comment_threads</div>
+          <div class="field">id, <em>document_id</em> FK, round</div>
+          <div class="field">category, dnv_comment, dnv_comment_date</div>
+          <div class="field">assigned_to, assigned_date</div>
+          <div class="field">bastion_response, bastion_response_date</div>
+          <div class="field">dnv_closed_date, dnv_approver</div>
+          <div class="field">disposition &nbsp;<em>[Open/Answered/Accepted/Rejected]</em></div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">CSV Data Files &nbsp;<span style="font-family:var(--font-data);font-size:10px">data/</span></p>
+        <table class="spec-table">
+          <tr><td>submissions.csv</td><td>Document submission register</td></tr>
+          <tr><td>tq_log.csv</td><td>Technical query log</td></tr>
+          <tr><td>action_tracker.csv</td><td>Open action items</td></tr>
+          <tr><td>audit_definitions.csv</td><td>Audit readiness criteria</td></tr>
+          <tr><td>dnv_comments.csv</td><td>Legacy DNV comment log</td></tr>
+          <tr><td>document_register.csv</td><td>Master document register</td></tr>
+          <tr><td>dnv_doc_requirements.csv</td><td>Seed data for DocReq DB</td></tr>
+        </table>
+        <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:14px;margin-bottom:8px">File Attachments &nbsp;<span style="font-family:var(--font-data);font-size:10px">uploads/</span></p>
+        <p style="font-size:11px;color:var(--muted);line-height:1.6">Per-document file attachments stored at <span style="font-family:var(--font-data)">uploads/&lt;DocumentNumber&gt;/</span>. Served via Flask static handler. No size limit enforced by application.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. API Endpoints -->
+  <div class="section">
+    <div class="sec-head">Key API Endpoints</div>
+    <div class="two-col">
+      <table class="dep-table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td>/api/docreq/requirements</td><td>All requirements + rollup</td></tr>
+          <tr><td>GET</td><td>/api/docreq/metrics</td><td>KPI metrics for dashboard</td></tr>
+          <tr><td>GET</td><td>/api/docreq/summary</td><td>Dashboard card summary</td></tr>
+          <tr><td>GET</td><td>/api/docreq/export</td><td>Filtered CSV download</td></tr>
+          <tr><td>POST</td><td>/api/docreq/requirements/:id/documents</td><td>Link document</td></tr>
+          <tr><td>POST</td><td>/api/docreq/documents/:id/comments</td><td>Add comment thread</td></tr>
+          <tr><td>PUT</td><td>/api/docreq/comments/:id</td><td>Update thread / log response</td></tr>
+        </tbody>
+      </table>
+      <table class="dep-table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td>/api/csv/:table</td><td>Read any CSV table</td></tr>
+          <tr><td>POST</td><td>/api/csv/:table</td><td>Add row to CSV</td></tr>
+          <tr><td>PUT</td><td>/api/csv/:table/:idx</td><td>Update CSV row</td></tr>
+          <tr><td>GET</td><td>/api/export/docreq-pdf</td><td>Coverage PDF</td></tr>
+          <tr><td>GET</td><td>/api/identity</td><td>Get current user cookie</td></tr>
+          <tr><td>POST</td><td>/api/identity</td><td>Set user name cookie</td></tr>
+          <tr><td>POST</td><td>/api/admin/sla-digest</td><td>Trigger Teams digest</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 7. Network & Access -->
+  <div class="section">
+    <div class="sec-head">Network &amp; Access</div>
+    <table class="spec-table">
+      <tr><td>Bind address</td><td>0.0.0.0 (all interfaces)</td></tr>
+      <tr><td>Default port</td><td>TCP 5000 (auto-selects from 5000, 5001, 8080, 8888, 8000)</td></tr>
+      <tr><td>Port file</td><td>state/.port (written on startup — read by START.bat)</td></tr>
+      <tr><td>LAN access</td><td>http://&lt;host-ip&gt;:5000 — requires Windows Firewall inbound rule on port 5000 (all profiles)</td></tr>
+      <tr><td>Remote access</td><td>Tailscale VPN recommended — bypasses router client isolation</td></tr>
+      <tr><td>Authentication</td><td>None (internal tool — identity via browser cookie only)</td></tr>
+      <tr><td>Startup</td><td>START.bat — launches Python process, opens browser, prints both URLs</td></tr>
+      <tr><td>Firewall setup</td><td>OPEN_FIREWALL.bat — run once as Administrator</td></tr>
+    </table>
+  </div>
+
+  <!-- 8. SLA Rules -->
+  <div class="section">
+    <div class="sec-head">SLA Rules &amp; Thresholds</div>
+    <table class="spec-table">
+      <tr><td>DNV comment response SLA</td><td>10 business days (Mon–Fri, excludes holidays)</td></tr>
+      <tr><td>Warning threshold</td><td>8 business days open (configurable: sla_digest_warn_bd)</td></tr>
+      <tr><td>Breach threshold</td><td>10 business days open (configurable: sla_digest_breach_bd)</td></tr>
+      <tr><td>TQ SLA</td><td>10 calendar days (configurable: tq_sla_days)</td></tr>
+      <tr><td>Stale document threshold</td><td>7 days since last update (configurable: stale_threshold)</td></tr>
+      <tr><td>Audit readiness target</td><td>85% (configurable: readiness_threshold)</td></tr>
+      <tr><td>Holiday calendar</td><td>US federal + project-specific dates in config.json</td></tr>
+    </table>
+  </div>
+
+  <!-- 9. Files & Directory Structure -->
+  <div class="section">
+    <div class="sec-head">Directory Structure</div>
+    <div class="db-schema" style="line-height:2">
+      <div><em>DNV _System/</em></div>
+      <div class="field">app.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Flask application &amp; all routes</div>
+      <div class="field">config.json &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Runtime configuration</div>
+      <div class="field">docreq_db.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SQLite backend for DocReq module</div>
+      <div class="field">sla_digest.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Teams SLA notification script</div>
+      <div class="field">report_docreq.py &nbsp;&nbsp;&nbsp;&nbsp; DocReq PDF generator (ReportLab)</div>
+      <div class="field">report_scorecard.py &nbsp; Interface health PDF</div>
+      <div class="field">report_sla.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; TQ SLA forecast PDF</div>
+      <div class="field">report_audit.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Audit readiness PDF</div>
+      <div class="field">START.bat &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Launch script</div>
+      <div class="field">OPEN_FIREWALL.bat &nbsp;&nbsp;&nbsp; One-time firewall setup (run as Admin)</div>
+      <div class="field">data/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CSV data files</div>
+      <div class="field">state/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SQLite DB, computed state, .port file</div>
+      <div class="field">templates/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Jinja2 HTML templates (8 pages)</div>
+      <div class="field">uploads/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Document file attachments</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="doc-footer">
+    <div>Bastion Technologies, Inc. &nbsp;·&nbsp; INTERNAL USE ONLY &nbsp;·&nbsp; DNV Sentinel 001 Vanguard 02</div>
+    <div id="footer-date">—</div>
+  </div>
+
+</div><!-- .page -->
+</div><!-- #wrapper -->
+
+<script>
+const d = new Date();
+const ds = d.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+document.getElementById('sheet-date').textContent = ds;
+document.getElementById('footer-date').textContent = 'Generated ' + ds;
+</script>
+</body>
+</html>

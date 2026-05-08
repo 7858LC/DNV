@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV BASTION COORDINATOR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0A0F1E;
+    --surface:  #111827;
+    --surface2: #1A2234;
+    --border:   #1E2D45;
+    --text:     #E8ECF0;
+    --muted:    #6B7280;
+    --red:      #EF4444;
+    --amber:    #F59E0B;
+    --green:    #22C55E;
+    --closed:   #374151;
+    --p3:       #6B7280;
+    --font-head: 'Barlow Condensed', sans-serif;
+    --font-data: 'IBM Plex Mono', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-data);
+    font-size: 13px;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-x: hidden;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     LAYOUT SHELL
+  ═══════════════════════════════════════════════════════ */
+  #shell {
+    display: grid;
+    grid-template-rows: 48px 1fr 36px;
+    grid-template-columns: 200px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     TOP BAR
+  ═══════════════════════════════════════════════════════ */
+  #topbar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 0;
+    z-index: 100;
+  }
+  #topbar .brand {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text);
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  #topbar .brand span {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  #topbar .center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: var(--font-head);
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  #topbar .center .run-date {
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  #topbar .right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .mode-chip {
+    font-family: var(--font-head);
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+  }
+  .mode-chip.weekly { border-color: var(--amber); color: var(--amber); }
+  .csv-status {
+    font-size: 11px;
+    color: var(--green);
+    font-family: var(--font-head);
+    letter-spacing: 0.06em;
+  }
+  #run-btn {
+    background: none;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 5px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s, color 0.15s;
+  }
+  #run-btn:hover { background: var(--green); color: var(--bg); }
+  #run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ═══════════════════════════════════════════════════════
+     SIDEBAR
+  ═══════════════════════════════════════════════════════ */
+  #sidebar {
+    grid-column: 1;
+    grid-row: 2;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .sidebar-section-title {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 4px;
+    margin-bottom: 2px;
+  }
+  .agent-row .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot.ok    { background: var(--green); }
+  .dot.warn  { background: var(--amber); }
+  .dot.error { background: var(--red); }
+  .dot.idle  { background: var(--closed); }
+  .agent-row .label {
+    font-family: var(--font-head);
+    font-size: 12px;
+    color: var(--text);
+    flex: 1;
+    line-height: 1.2;
+  }
+  .connector-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 4px;
+    font-size: 11px;
+  }
+  .connector-row .key { color: var(--muted); font-family: var(--font-head); letter-spacing: 0.04em; }
+  .connector-row .val { color: var(--text); font-weight: 500; }
+  #export-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--font-head);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 6px 10px;
+    cursor: not-allowed;
+    text-align: center;
+    opacity: 0.5;
+    transition: all 0.15s;
+    width: 100%;
+  }
+  #export-btn.active {
+    border-color: var(--amber);
+    color: var(--amber);
+    cursor: pointer;
+    opacity: 1;
+  }
+  #export-btn.active:hover { background: var(--amber); color: var(--bg); }
+
+  /* ═══════════════════════════════════════════════════════
+     MAIN CONTENT AREA
+  ═══════════════════════════════════════════════════════ */
+  #main {
+    grid-column: 2;
+    grid-row: 2;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     CARDS ROW
+  ═══════════════════════════════════════════════════════ */
+  .cards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    position: relative;
+  }
+  .card-title {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .card.clickable { cursor: pointer; }
+  .card.clickable:hover { border-color: #2E4060; background: #131f35; }
+
+  /* ── Card 1: Submission Intake ── */
+  .intake-big {
+    font-family: var(--font-head);
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .intake-sub {
+    display: flex;
+    gap: 14px;
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .intake-sub .item { display: flex; align-items: center; gap: 4px; }
+  .intake-sub .item .n { font-size: 18px; }
+
+  /* ── Card 2: Action Tracker ── */
+  .rag-trio {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .rag-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 4px 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .rag-cell .big-num {
+    font-family: var(--font-head);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .rag-cell .sub-label {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .rag-cell.red  .big-num { color: var(--red); }
+  .rag-cell.amber .big-num { color: var(--amber); }
+  .rag-cell.green .big-num { color: var(--green); }
+  .delta-tag {
+    position: absolute;
+    top: 12px; right: 14px;
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .delta-tag .count { color: var(--amber); font-weight: 700; }
+
+  /* ── Card 4: DNV Doc Requirements ── */
+  .dr-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .dr-stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 7px 10px;
+  }
+  .dr-stat-val {
+    font-family: var(--font-head);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .dr-stat-lbl {
+    font-family: var(--font-head);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .dr-link {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .dr-link:hover { color: var(--blue); }
+
+  /* ── Card 3: Audit Readiness ── */
+  .audit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-row .aname {
+    font-family: var(--font-head);
+    font-size: 12px;
+    flex: 0 0 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+  }
+  .audit-row .aname.small { font-size: 11px; }
+  .prog-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .prog-bar {
+    height: 100%;
+    transition: width 0.4s ease;
+  }
+  .prog-bar.green { background: var(--green); }
+  .prog-bar.amber { background: var(--amber); }
+  .prog-bar.red   { background: var(--red); }
+  .audit-row .score {
+    font-size: 12px;
+    font-weight: 500;
+    flex: 0 0 38px;
+    text-align: right;
+  }
+  .alert-icon { color: var(--amber); margin-left: 2px; font-size: 12px; }
+
+  /* ═══════════════════════════════════════════════════════
+     FULL-WIDTH ROW
+  ═══════════════════════════════════════════════════════ */
+  .full-row {
+    display: grid;
+    grid-template-columns: 65fr 35fr;
+    gap: 12px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+  }
+  .panel-title {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* ── TQ Escalations Table ── */
+  .tq-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .tq-table th {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 4px 8px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tq-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #161d2a;
+    vertical-align: middle;
+  }
+  .tq-table tr.p1 td { border-left: 3px solid var(--red); }
+  .tq-table tr.p1 td:first-child { padding-left: 5px; }
+  .tq-table tr.p2 td { border-left: 3px solid var(--amber); }
+  .tq-table tr.p2 td:first-child { padding-left: 5px; }
+  .tier-badge {
+    font-family: var(--font-head);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+  }
+  .tier-badge.P1 { color: var(--red); border: 1px solid var(--red); }
+  .tier-badge.P2 { color: var(--amber); border: 1px solid var(--amber); }
+  .no-critical {
+    color: var(--green);
+    font-family: var(--font-head);
+    font-size: 14px;
+    padding: 16px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Risk Notes ── */
+  .risk-content {
+    font-size: 11.5px;
+    color: var(--text);
+    line-height: 1.65;
+    white-space: pre-wrap;
+    font-family: var(--font-data);
+  }
+  .risk-content .daily-msg {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .risk-flag {
+    padding: 3px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    line-height: 1.4;
+  }
+  .risk-flag .bullet { color: var(--amber); flex-shrink: 0; margin-top: 1px; }
+  .risk-flag.red .bullet { color: var(--red); }
+  .risk-flag.green .bullet { color: var(--green); }
+  .risk-section-head {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 10px 0 5px;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     BOTTOM STATUS BAR
+  ═══════════════════════════════════════════════════════ */
+  #statusbar {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 0;
+    font-size: 11px;
+  }
+  #statusbar .left  { flex: 1; color: var(--muted); }
+  #statusbar .center {
+    flex: 1;
+    text-align: center;
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  #statusbar .right {
+    flex: 1;
+    text-align: right;
+    color: var(--muted);
+  }
+  #statusbar .right a {
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+  }
+  #statusbar .right a:hover { color: var(--text); }
+  .health-red   { color: var(--red); }
+  .health-amber { color: var(--amber); }
+  .health-green { color: var(--green); }
+
+  /* ═══════════════════════════════════════════════════════
+     DRILL-DOWN PANEL
+  ═══════════════════════════════════════════════════════ */
+  #overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+  }
+  #drill-panel {
+    position: fixed;
+    top: 48px;
+    right: -100%;
+    bottom: 36px;
+    width: min(860px, 90vw);
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 201;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+  #drill-panel.open { right: 0; }
+  #drill-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    flex-shrink: 0;
+  }
+  #drill-title {
+    font-family: var(--font-head);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  #drill-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 10px;
+    line-height: 1;
+  }
+  #drill-close:hover { color: var(--text); border-color: var(--text); }
+  #drill-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 18px;
+  }
+  .drill-sort-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .sort-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--font-head);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .sort-btn:hover, .sort-btn.active { border-color: var(--text); color: var(--text); background: var(--surface2); }
+
+  /* Drill-down data table */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+  }
+  .data-table th {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 5px 10px 7px;
+    border-bottom: 2px solid var(--border);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .data-table th:hover { color: var(--text); }
+  .data-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #161d2a;
+    vertical-align: top;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .data-table tr:hover td { background: var(--surface2); }
+  .data-table td.wrap { white-space: normal; }
+  .rag-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .rag-dot.RED    { background: var(--red); }
+  .rag-dot.AMBER  { background: var(--amber); }
+  .rag-dot.GREEN  { background: var(--green); }
+  .rag-dot.CLOSED { background: var(--closed); }
+
+  /* ═══════════════════════════════════════════════════════
+     LOADING OVERLAY
+  ═══════════════════════════════════════════════════════ */
+  #loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,15,30,0.82);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    font-family: var(--font-head);
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    color: var(--text);
+  }
+  #loading-overlay.show { display: flex; }
+  .load-ring {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     MISC UTILITIES
+  ═══════════════════════════════════════════════════════ */
+  .col-red   { color: var(--red); }
+  .col-amber { color: var(--amber); }
+  .col-green { color: var(--green); }
+  .col-muted { color: var(--muted); }
+  .col-text  { color: var(--text); }
+  .empty-state {
+    color: var(--muted);
+    font-family: var(--font-head);
+    font-size: 13px;
+    padding: 20px 0;
+    text-align: center;
+    letter-spacing: 0.06em;
+  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="load-ring"></div>
+  <span id="loading-msg">RUNNING PIPELINE…</span>
+</div>
+
+<div id="overlay" onclick="closeDrill()"></div>
+
+<div id="drill-panel">
+  <div id="drill-header">
+    <span id="drill-title">Detail View</span>
+    <button id="drill-close" onclick="closeDrill()">✕</button>
+  </div>
+  <div id="drill-body">
+    <div id="drill-sort-row" class="drill-sort-row"></div>
+    <div id="drill-content"></div>
+  </div>
+</div>
+
+<div id="shell">
+
+  <!-- ── TOP BAR ── -->
+  <header id="topbar">
+    <div class="brand">DNV <span>BASTION</span> COORDINATOR<span style="font-size:11px;font-weight:400;letter-spacing:.06em;color:var(--muted);margin-left:10px">Bastion Technologies Account</span></div>
+    <div class="center">
+      <span class="run-date" id="tb-date">—</span>
+      <span id="tb-week" style="font-size:11px;color:var(--muted)">WEEK —</span>
+    </div>
+    <div class="right">
+      <span id="tb-mode" class="mode-chip" onclick="toggleMode()" title="Click to switch between DAILY and WEEKLY mode">DAILY</span>
+      <span id="tb-csv" class="csv-status">● CSV DATA LOADED</span>
+      <a href="/coordinator" style="background:none;border:1px solid var(--blue);color:var(--blue);font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.1em;padding:5px 14px;cursor:pointer;text-decoration:none;display:flex;align-items:center">COORDINATOR ›</a>
+      <a href="/submissions" style="background:none;border:1px solid #6B7280;color:#6B7280;font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.1em;padding:5px 14px;cursor:pointer;text-decoration:none;display:flex;align-items:center">SUBMISSIONS ›</a>
+      <a href="/schedule" style="background:none;border:1px solid #F59E0B;color:#F59E0B;font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.1em;padding:5px 14px;cursor:pointer;text-decoration:none;display:flex;align-items:center">SCHEDULE ›</a>
+      <a href="/kanban" style="background:none;border:1px solid #6B7280;color:#6B7280;font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.1em;padding:5px 14px;cursor:pointer;text-decoration:none;display:flex;align-items:center">KANBAN ›</a>
+      <a href="/reports" style="background:none;border:1px solid #6B7280;color:#6B7280;font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.1em;padding:5px 14px;cursor:pointer;text-decoration:none;display:flex;align-items:center">REPORTS ›</a>
+      <button id="run-btn" onclick="runPipeline()">
+        <div class="spinner" id="run-spinner"></div>
+        ▶ RUN PIPELINE
+      </button>
+    </div>
+  </header>
+
+  <!-- ── SIDEBAR ── -->
+  <aside id="sidebar">
+    <div>
+      <div class="sidebar-section-title">Agent Status</div>
+      <div class="agent-row"><span class="dot idle" id="dot-1"></span><span class="label">Intake &amp; Routing</span></div>
+      <div class="agent-row"><span class="dot idle" id="dot-2"></span><span class="label">Action Tracker</span></div>
+      <div class="agent-row"><span class="dot idle" id="dot-3"></span><span class="label">Audit Readiness</span></div>
+      <div class="agent-row"><span class="dot idle" id="dot-4"></span><span class="label">TQ Log Manager</span></div>
+      <div class="agent-row"><span class="dot idle" id="dot-5"></span><span class="label">Weekly Generator</span></div>
+    </div>
+    <div>
+      <div class="sidebar-section-title">Connector Stats</div>
+      <div class="connector-row"><span class="key">Submissions</span><span class="val" id="sc-subs">—</span></div>
+      <div class="connector-row"><span class="key">Action Items</span><span class="val" id="sc-acts">—</span></div>
+      <div class="connector-row"><span class="key">TQ Registry</span><span class="val" id="sc-tqs">—</span></div>
+      <div class="connector-row"><span class="key">Audits</span><span class="val" id="sc-auds">—</span></div>
+    </div>
+    <div style="margin-top:auto">
+      <button id="export-btn" onclick="exportReport()">EXPORT WEEKLY REPORT</button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main id="main">
+
+    <!-- Cards row -->
+    <div class="cards-row">
+
+      <!-- Card 1: Submission Intake -->
+      <div class="card" id="card-intake">
+        <div class="card-title">Bastion Submission Intake</div>
+        <div class="intake-big" id="intake-total">—</div>
+        <div class="intake-sub">
+          <div class="item"><span class="n col-green" id="intake-new">—</span>&nbsp;<span class="col-muted">New</span></div>
+          <div class="item"><span class="n col-amber" id="intake-resub">—</span>&nbsp;<span class="col-muted">Re-subs</span></div>
+          <div class="item"><span class="n col-red" id="intake-hold">—</span>&nbsp;<span class="col-muted">Hold</span></div>
+          <div class="item"><span class="n col-red" id="intake-overdue">—</span>&nbsp;<span class="col-muted">Overdue Exp.</span></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Action Tracker -->
+      <div class="card clickable" id="card-tracker" onclick="openDrill('tracker')">
+        <div class="card-title">Action Tracker</div>
+        <div class="delta-tag">RAG DELTA <span class="count" id="rag-delta">—</span></div>
+        <div class="rag-trio">
+          <div class="rag-cell red">
+            <span class="big-num" id="rag-red">—</span>
+            <span class="sub-label">OVERDUE</span>
+          </div>
+          <div class="rag-cell amber">
+            <span class="big-num" id="rag-amber">—</span>
+            <span class="sub-label">UPCOMING</span>
+          </div>
+          <div class="rag-cell green">
+            <span class="big-num" id="rag-green">—</span>
+            <span class="sub-label">HEALTHY</span>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:var(--muted);font-family:var(--font-head);letter-spacing:.08em">
+          STALE: <span id="rag-stale" class="col-amber">—</span> items &nbsp;·&nbsp; Click to expand
+        </div>
+      </div>
+
+      <!-- Card 3: Audit Readiness -->
+      <div class="card" id="card-audit">
+        <div class="card-title">Audit Readiness</div>
+        <div id="audit-list"></div>
+      </div>
+
+      <!-- Card 4: DNV Doc Requirements -->
+      <div class="card clickable" id="card-docreq" onclick="window.location.href='/reports'">
+        <div class="card-title">DNV Doc Requirements</div>
+        <div class="dr-stat-grid">
+          <div class="dr-stat">
+            <div class="dr-stat-val col-text" id="dr-total">—</div>
+            <div class="dr-stat-lbl">Total Reqs</div>
+          </div>
+          <div class="dr-stat">
+            <div class="dr-stat-val col-green" id="dr-reviewed">—</div>
+            <div class="dr-stat-lbl">DNV Reviewed</div>
+          </div>
+          <div class="dr-stat">
+            <div class="dr-stat-val col-amber" id="dr-open-c">—</div>
+            <div class="dr-stat-lbl">Open Comments</div>
+          </div>
+          <div class="dr-stat">
+            <div class="dr-stat-val col-red" id="dr-missing">—</div>
+            <div class="dr-stat-lbl">Missing / Gap</div>
+          </div>
+        </div>
+        <a class="dr-link" href="/reports">VIEW FULL REPORT ›</a>
+      </div>
+
+    </div>
+
+    <!-- Full-width row -->
+    <div class="full-row">
+
+      <!-- TQ Escalations -->
+      <div class="panel">
+        <div class="panel-title">Critical DNV Technical Query Escalations
+          <span style="float:right;font-size:11px;cursor:pointer;color:var(--muted);letter-spacing:.06em" onclick="openDrill('tq')">VIEW ALL ›</span>
+        </div>
+        <div id="tq-panel-content"></div>
+      </div>
+
+      <!-- Coordinator Risk Notes -->
+      <div class="panel">
+        <div class="panel-title">Interface &amp; Escalation Status</div>
+        <div class="risk-content" id="risk-notes-content">
+          <span class="daily-msg">Run in weekly mode to generate risk summary.</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ── BOTTOM STATUS BAR ── -->
+  <footer id="statusbar">
+    <div class="left" id="sb-timestamp">Last run: —</div>
+    <div class="center" id="sb-health">PROGRAM HEALTH: —</div>
+    <div class="right"><a href="/logs/session_log.json" target="_blank">Session Log ↗</a></div>
+  </footer>
+
+</div><!-- #shell -->
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+let STATE = null;
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Restore mode chip from localStorage before first state fetch
+  _applyModeChip(_resolveMode());
+  fetchState();
+  fetchDocReq();
+});
+
+async function fetchDocReq() {
+  try {
+    const res = await fetch('/api/csv/dnv_requirements');
+    if (!res.ok) return;
+    const rows = await res.json();
+    const numbered = rows.filter(r => r.item_number !== '' && r.item_number != null);
+    const total    = numbered.length;
+    const reviewed = rows.filter(r => r.coverage_status === 'DNV Reviewed').length;
+    const openC    = rows.filter(r => r.coverage_status === 'Open Comments').length;
+    const missing  = rows.filter(r => r.coverage_status === 'MISSING' || r.coverage_status === 'Gap').length;
+    document.getElementById('dr-total').textContent    = total;
+    document.getElementById('dr-reviewed').textContent = reviewed;
+    document.getElementById('dr-open-c').textContent   = openC;
+    document.getElementById('dr-missing').textContent  = missing;
+  } catch(e) { console.warn('DocReq card failed:', e); }
+}
+
+async function fetchState() {
+  try {
+    const res = await fetch('/api/state');
+    STATE = await res.json();
+    render(STATE);
+  } catch(e) {
+    document.getElementById('sb-health').textContent = 'FAILED TO LOAD STATE';
+    console.error(e);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PIPELINE RUN
+═══════════════════════════════════════════════════════ */
+function toggleMode() {
+  const chip = document.getElementById('tb-mode');
+  const isWeekly = chip.textContent.trim() === 'WEEKLY';
+  const newMode = isWeekly ? 'daily' : 'weekly';
+  _applyModeChip(newMode);
+  localStorage.setItem('dnv_pipeline_mode', newMode);
+}
+
+function _applyModeChip(mode) {
+  const chip = document.getElementById('tb-mode');
+  chip.textContent = mode === 'weekly' ? 'WEEKLY' : 'DAILY';
+  chip.className   = 'mode-chip' + (mode === 'weekly' ? ' weekly' : '');
+}
+
+function _resolveMode(stateMode) {
+  // User's explicit choice always wins over whatever the last run used.
+  return localStorage.getItem('dnv_pipeline_mode') || stateMode || 'daily';
+}
+
+async function runPipeline() {
+  const btn = document.getElementById('run-btn');
+  const spinner = document.getElementById('run-spinner');
+  const overlay = document.getElementById('loading-overlay');
+  const mode = _resolveMode();
+
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  overlay.classList.add('show');
+  document.getElementById('loading-msg').textContent = 'RUNNING PIPELINE…';
+
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({mode})
+    });
+    const data = await res.json();
+    overlay.classList.remove('show');
+    if (data.status === 'ok') {
+      STATE = data.state;
+      render(STATE);
+    } else {
+      alert('Pipeline error: ' + data.message);
+    }
+  } catch(e) {
+    overlay.classList.remove('show');
+    alert('Network error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════════════════════ */
+function exportReport() {
+  const btn = document.getElementById('export-btn');
+  if (!btn.classList.contains('active')) return;
+  window.location.href = '/api/export/md';
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN RENDER
+═══════════════════════════════════════════════════════ */
+function render(s) {
+  if (!s || s.error) {
+    document.getElementById('sb-health').textContent = s?.error || 'No state';
+    return;
+  }
+
+  // Top bar
+  document.getElementById('tb-date').textContent = s.run_date || '—';
+  document.getElementById('tb-week').textContent = s.week_number ? 'WEEK ' + s.week_number : '';
+  // Mode chip: user's stored choice wins over last-run state
+  _applyModeChip(_resolveMode(s.mode));
+
+  // Agent dots
+  setDot('dot-1', s.agent_intake?.status);
+  setDot('dot-2', s.agent_tracker?.status);
+  setDot('dot-3', s.agent_audit?.status);
+  setDot('dot-4', s.agent_tq?.status);
+  setDot('dot-5', s.agent_dashboard?.status);
+
+  // Connector stats
+  const counts = s.data_counts || {};
+  document.getElementById('sc-subs').textContent = counts.submissions ?? '—';
+  document.getElementById('sc-acts').textContent = counts.action_tracker ?? '—';
+  document.getElementById('sc-tqs').textContent  = counts.tq_log ?? '—';
+  document.getElementById('sc-auds').textContent = counts.audit_definitions ?? '—';
+
+  // Export button state
+  const exportBtn = document.getElementById('export-btn');
+  if (s.mode === 'weekly' && s.agent_dashboard?.status === 'OK') {
+    exportBtn.classList.add('active');
+  }
+
+  renderIntake(s.agent_intake || {});
+  renderTracker(s.agent_tracker || {});
+  renderAudit(s.agent_audit || {});
+  renderTQ(s.agent_tq || {});
+  renderRiskNotes(s);
+  renderStatusBar(s);
+}
+
+function setDot(id, status) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'dot ' + (status === 'OK' ? 'ok' : status === 'ERROR' ? 'error' : status ? 'warn' : 'idle');
+}
+
+/* ── Card 1: Intake ── */
+function renderIntake(d) {
+  document.getElementById('intake-total').textContent  = d.total_submissions ?? '—';
+  document.getElementById('intake-new').textContent    = d.new_count ?? '—';
+  document.getElementById('intake-resub').textContent  = d.resub_count ?? '—';
+  document.getElementById('intake-hold').textContent   = d.hold_count ?? '—';
+  document.getElementById('intake-overdue').textContent = d.overdue_expected_count ?? '—';
+}
+
+/* ── Card 2: Tracker ── */
+function renderTracker(d) {
+  document.getElementById('rag-red').textContent   = d.red_count ?? '—';
+  document.getElementById('rag-amber').textContent = d.amber_count ?? '—';
+  document.getElementById('rag-green').textContent = d.green_count ?? '—';
+  document.getElementById('rag-stale').textContent = d.stale_count ?? '—';
+  document.getElementById('rag-delta').textContent = d.delta ? d.delta.length : '—';
+}
+
+/* ── Card 3: Audit Readiness ── */
+function renderAudit(d) {
+  const list = document.getElementById('audit-list');
+  const audits = (d.audits || []).filter(a => ['Active','Upcoming'].includes(a.Status));
+  if (!audits.length) {
+    list.innerHTML = '<div class="empty-state">No active/upcoming audits</div>';
+    return;
+  }
+  list.innerHTML = audits.map(a => {
+    const score = a.ReadinessScore ?? 0;
+    const cls = score >= 85 ? 'green' : score >= 60 ? 'amber' : 'red';
+    const clsColor = score >= 85 ? 'col-green' : score >= 60 ? 'col-amber' : 'col-red';
+    const alert = a.alert_flag ? '<span class="alert-icon" title="Readiness alert">⚠</span>' : '';
+    const short = a.AuditName.length > 26 ? a.AuditName.substring(0,24)+'…' : a.AuditName;
+    const days = a.days_to_audit != null ? `<span style="font-size:10px;color:var(--muted)"> ${a.days_to_audit}bd</span>` : '';
+    return `
+      <div class="audit-row">
+        <span class="aname" title="${escHtml(a.AuditName)}">${escHtml(short)}${days}</span>
+        <div class="prog-wrap"><div class="prog-bar ${cls}" style="width:${Math.min(100,score)}%"></div></div>
+        <span class="score ${clsColor}">${score}%</span>
+        ${alert}
+      </div>`;
+  }).join('');
+}
+
+/* ── TQ Panel ── */
+function renderTQ(d) {
+  const panel = document.getElementById('tq-panel-content');
+  const items = [...(d.p1_items || []), ...(d.p2_items || [])];
+  if (!items.length) {
+    panel.innerHTML = '<div class="no-critical">● No Critical Escalations</div>';
+    return;
+  }
+  panel.innerHTML = `
+    <table class="tq-table">
+      <thead><tr>
+        <th>TQID</th><th>Subject</th><th>Tier</th><th>Days Open</th><th>Owner</th>
+      </tr></thead>
+      <tbody>
+        ${items.map(t => `
+          <tr class="${t.EscalationTier === 'P1' ? 'p1' : 'p2'}">
+            <td><code>${escHtml(t.TQID)}</code></td>
+            <td style="max-width:220px;white-space:normal;line-height:1.3">${escHtml(t.Subject)}</td>
+            <td><span class="tier-badge ${t.EscalationTier}">${t.EscalationTier}</span></td>
+            <td class="${t._sla_days > 10 ? 'col-red' : ''}">${t._sla_days}</td>
+            <td class="col-muted">${escHtml(t.ResponseOwner || '—')}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ── Risk Notes ── */
+function renderRiskNotes(s) {
+  const el = document.getElementById('risk-notes-content');
+  const dash = s.agent_dashboard;
+
+  if (dash?.status === 'OK' && dash.risk_notes) {
+    el.innerHTML = formatRiskNotes(dash.top_flags || []);
+    return;
+  }
+  if (dash?.status === 'ERROR') {
+    el.innerHTML = `<span class="daily-msg col-red">Agent 5 error: ${escHtml(dash.message || '')}</span>`;
+    return;
+  }
+  // Daily mode — compute inline flags
+  const flags = [];
+  const t = s.agent_tracker || {};
+  const tq = s.agent_tq || {};
+  const a = s.agent_audit || {};
+  const i = s.agent_intake || {};
+  if (tq.p1_count > 0) flags.push({cls:'red', text:`${tq.p1_count} P1 TQ escalation(s) — critical path + SLA breached`});
+  if (a.alert_count > 0) flags.push({cls:'red', text:`${a.alert_count} audit readiness alert(s)`});
+  if (t.red_count > 0) flags.push({cls:'red', text:`${t.red_count} overdue action item(s)`});
+  if (tq.p2_count > 0) flags.push({cls:'',    text:`${tq.p2_count} P2 TQ escalation(s)`});
+  if (t.amber_count > 0) flags.push({cls:'', text:`${t.amber_count} action item(s) due within 5 business days`});
+  if (t.stale_count > 0) flags.push({cls:'', text:`${t.stale_count} stale action item(s)`});
+  if (i.hold_count > 0) flags.push({cls:'',   text:`${i.hold_count} submission(s) on Intake-Hold`});
+
+  if (!flags.length) {
+    el.innerHTML = '<div class="risk-flag green"><span class="bullet">●</span><span>No critical flags — run weekly mode for full report.</span></div>';
+  } else {
+    el.innerHTML = '<div class="risk-section-head" style="margin-top:0;border-top:none">Live Flags</div>' +
+      flags.map(f => `<div class="risk-flag ${f.cls}"><span class="bullet">▸</span><span>${escHtml(f.text)}</span></div>`).join('') +
+      '<div class="risk-section-head" style="margin-top:12px">Run in weekly mode for full risk report.</div>';
+  }
+}
+
+function formatRiskNotes(flags) {
+  if (!flags.length) return '<div class="risk-flag green"><span class="bullet">●</span><span>No critical flags.</span></div>';
+  return '<div class="risk-section-head" style="margin-top:0;border-top:none">Top Flags</div>' +
+    flags.map(f => `<div class="risk-flag"><span class="bullet">▸</span><span>${escHtml(f)}</span></div>`).join('');
+}
+
+/* ── Status Bar ── */
+function renderStatusBar(s) {
+  const ts = s.run_timestamp ? new Date(s.run_timestamp).toLocaleString() : '—';
+  document.getElementById('sb-timestamp').textContent = 'Last run: ' + ts;
+
+  const rag = s.program_rag || 'UNKNOWN';
+  const cls = rag === 'RED' ? 'health-red' : rag === 'AMBER' ? 'health-amber' : 'health-green';
+  document.getElementById('sb-health').innerHTML =
+    `PROGRAM HEALTH: <span class="${cls}">${rag}</span>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DRILL-DOWN PANEL
+═══════════════════════════════════════════════════════ */
+function openDrill(type) {
+  if (!STATE) return;
+  document.getElementById('overlay').style.display = 'block';
+  document.getElementById('drill-panel').classList.add('open');
+
+  if (type === 'tracker') renderDrillTracker();
+  if (type === 'tq')      renderDrillTQ();
+}
+
+function closeDrill() {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('drill-panel').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrill(); });
+
+function renderDrillTracker() {
+  document.getElementById('drill-title').textContent = 'Action Tracker — Full Register';
+  const d = STATE.agent_tracker || {};
+  const all = [
+    ...(d.red_items || []),
+    ...(d.amber_items || []),
+    ...(d.green_items || []),
+  ];
+  // Sort buttons
+  const sortRow = document.getElementById('drill-sort-row');
+  sortRow.innerHTML = `
+    <button class="sort-btn active" data-sort="rag" onclick="sortDrillTracker(this,'rag')">BY RAG</button>
+    <button class="sort-btn" data-sort="due" onclick="sortDrillTracker(this,'due')">BY DUE DATE</button>
+    <button class="sort-btn" data-sort="owner" onclick="sortDrillTracker(this,'owner')">BY OWNER</button>`;
+
+  renderDrillTrackerTable(all, 'rag');
+}
+
+function sortDrillTracker(btn, mode) {
+  document.querySelectorAll('#drill-sort-row .sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const d = STATE.agent_tracker || {};
+  const all = [...(d.red_items||[]),...(d.amber_items||[]),...(d.green_items||[])];
+  renderDrillTrackerTable(all, mode);
+}
+
+function renderDrillTrackerTable(items, sortMode) {
+  const RAG_ORDER = {RED:0,AMBER:1,GREEN:2,CLOSED:3};
+  let sorted = [...items];
+  if (sortMode === 'rag') sorted.sort((a,b) => (RAG_ORDER[a.RAGStatus]??9)-(RAG_ORDER[b.RAGStatus]??9));
+  else if (sortMode === 'due') sorted.sort((a,b) => (a.DueDate||'9999')>(b.DueDate||'9999')?1:-1);
+  else if (sortMode === 'owner') sorted.sort((a,b) => (a.Owner||'').localeCompare(b.Owner||''));
+
+  document.getElementById('drill-content').innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>ACTION ID</th><th>TITLE</th><th>OWNER</th>
+        <th>DUE DATE</th><th>STATUS</th><th>RAG</th><th>DAYS LEFT</th><th>NOTES</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.map(r => {
+          const rag = r.RAGStatus || 'GREEN';
+          const cls = rag === 'RED' ? 'col-red' : rag === 'AMBER' ? 'col-amber' : rag === 'CLOSED' ? 'col-muted' : 'col-green';
+          const daysLeft = r._days_until_due != null ? r._days_until_due : '—';
+          const daysClass = r._days_until_due != null && r._days_until_due < 0 ? 'col-red' : '';
+          return `<tr>
+            <td><code>${escHtml(r.ActionID)}</code></td>
+            <td class="wrap" style="min-width:150px;white-space:normal;line-height:1.35">${escHtml(r.Title||'')}</td>
+            <td>${escHtml(r.Owner||'—')}</td>
+            <td>${escHtml(r.DueDate||'—')}</td>
+            <td>${escHtml(r.Status||'')}</td>
+            <td class="${cls}"><span class="rag-dot ${rag}"></span>${rag}</td>
+            <td class="${daysClass}">${daysLeft}</td>
+            <td class="wrap col-muted" style="white-space:normal;line-height:1.35;min-width:120px">${escHtml(r.Notes||'')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderDrillTQ() {
+  document.getElementById('drill-title').textContent = 'TQ Registry — All Open Items';
+  document.getElementById('drill-sort-row').innerHTML = '';
+  const d = STATE.agent_tq || {};
+  const TIER_ORDER = {P1:0,P2:1,P3:2,P4:3,'':4};
+  const all = [...(d.p1_items||[]),...(d.p2_items||[]),...(d.p3_items||[]),...(d.p4_items||[])];
+  all.sort((a,b) => (TIER_ORDER[a.EscalationTier??'']??5)-(TIER_ORDER[b.EscalationTier??'']??5));
+
+  const TIER_COLORS = {P1:'col-red',P2:'col-amber',P3:'col-muted',P4:'col-muted','':"col-muted"};
+
+  document.getElementById('drill-content').innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>TQ ID</th><th>SUBJECT</th><th>SOURCE DOC</th>
+        <th>OPENED</th><th>DAYS OPEN</th><th>TIER</th><th>OWNER</th><th>STATUS</th>
+      </tr></thead>
+      <tbody>
+        ${all.map(r => {
+          const tier = r.EscalationTier || '—';
+          const cls = TIER_COLORS[r.EscalationTier||''];
+          const slaCls = r._sla_days > 10 ? 'col-red' : r._sla_days > 7 ? 'col-amber' : '';
+          return `<tr>
+            <td><code>${escHtml(r.TQID)}</code></td>
+            <td class="wrap" style="min-width:160px;white-space:normal;line-height:1.35">${escHtml(r.Subject||'')}</td>
+            <td><code>${escHtml(r.SourceDocumentNumber||'—')}</code></td>
+            <td>${escHtml(r.DateOpened||'—')}</td>
+            <td class="${slaCls}">${r._sla_days}</td>
+            <td class="${cls}"><strong>${tier}</strong></td>
+            <td>${escHtml(r.ResponseOwner||'—')}</td>
+            <td class="col-muted">${escHtml(r.Status||'')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentinel 001 — Experience Conflict Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0A0F1E; --surface: #111827; --surface2: #1A2234;
+    --border: #1E2D45; --text: #E8ECF0; --muted: #6B7280;
+    --red: #EF4444; --amber: #F59E0B; --green: #22C55E;
+    --blue: #3B82F6; --purple: #8B5CF6; --closed: #374151;
+    --font-head: 'Barlow Condensed', sans-serif;
+    --font-data: 'IBM Plex Mono', monospace;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--font-data); font-size: 13px; line-height: 1.5;
+    padding: 32px 40px; max-width: 1100px; margin: 0 auto;
+  }
+  @media print { body { background: #fff; color: #000; } }
+
+  /* Header */
+  .report-header {
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .report-title {
+    font-family: var(--font-head); font-size: 28px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--text);
+  }
+  .report-subtitle { font-family: var(--font-head); font-size: 14px; color: var(--muted); margin-top: 4px; letter-spacing: 0.06em; }
+  .report-meta { text-align: right; font-size: 11px; color: var(--muted); }
+  .report-meta .date { font-size: 14px; color: var(--text); font-weight: 600; }
+
+  /* Section titles */
+  .section-title {
+    font-family: var(--font-head); font-size: 12px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 14px;
+  }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 28px;
+  }
+  .summary-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 14px 16px;
+  }
+  .summary-card .sc-label {
+    font-family: var(--font-head); font-size: 10px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+  }
+  .summary-card .sc-val {
+    font-family: var(--font-head); font-size: 40px; font-weight: 700; line-height: 1;
+  }
+  .sc-val.red { color: var(--red); }
+  .sc-val.amber { color: var(--amber); }
+  .sc-val.green { color: var(--green); }
+  .sc-val.blue { color: var(--blue); }
+
+  /* Findings table */
+  .findings-table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+  .findings-table th {
+    font-family: var(--font-head); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+    background: var(--surface2); padding: 8px 10px;
+    border: 1px solid var(--border); text-align: left;
+  }
+  .findings-table td {
+    padding: 8px 10px; border: 1px solid var(--border);
+    font-size: 12px; vertical-align: top;
+  }
+  .findings-table tr:nth-child(even) td { background: var(--surface2); }
+
+  /* Badges */
+  .badge {
+    font-family: var(--font-head); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 2px 6px; text-transform: uppercase;
+    display: inline-block; white-space: nowrap;
+  }
+  .badge-critical    { background: var(--red);    color: #fff; }
+  .badge-operational { background: var(--amber);  color: #000; }
+  .badge-planning    { background: var(--blue);   color: #fff; }
+  .badge-design      { background: var(--purple); color: #fff; }
+  .badge-open        { background: var(--blue);   color: #fff; }
+  .badge-assigned    { background: var(--purple); color: #fff; }
+  .badge-inreview    { background: var(--amber);  color: #000; }
+  .badge-closed      { background: var(--green);  color: #000; }
+  .badge-deferred    { background: var(--closed); color: var(--muted); }
+  .badge-overdue     { background: var(--red);    color: #fff; }
+
+  /* Finding detail block */
+  .finding-block {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 16px 18px; margin-bottom: 16px;
+    break-inside: avoid;
+  }
+  .finding-block.critical { border-left: 4px solid var(--red); }
+  .finding-block.operational { border-left: 4px solid var(--amber); }
+  .finding-block.planning { border-left: 4px solid var(--blue); }
+  .finding-block.design { border-left: 4px solid var(--purple); }
+
+  .fb-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .fb-id {
+    font-family: var(--font-head); font-size: 13px; font-weight: 700;
+    color: var(--amber); letter-spacing: 0.08em;
+  }
+  .fb-title {
+    font-family: var(--font-head); font-size: 16px; font-weight: 600;
+    color: var(--text); flex: 1;
+  }
+  .fb-expectation { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-style: italic; }
+  .fb-dims { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .dim-tag {
+    font-family: var(--font-head); font-size: 10px; letter-spacing: 0.06em;
+    padding: 2px 6px; border: 1px solid var(--border); color: var(--muted);
+  }
+
+  /* Disposition table inside finding */
+  .disp-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+  .disp-table th {
+    font-family: var(--font-head); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+    background: var(--surface2); padding: 5px 8px;
+    border: 1px solid var(--border);
+  }
+  .disp-table td { padding: 5px 8px; border: 1px solid var(--border); }
+  .disp-table tr.overdue td { background: rgba(239,68,68,0.08); }
+
+  /* Overdue section */
+  .overdue-list { margin-bottom: 28px; }
+  .overdue-item {
+    background: rgba(239,68,68,0.08); border: 1px solid var(--red);
+    padding: 8px 12px; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 12px; font-size: 12px;
+  }
+  .overdue-item .oi-id { font-family: var(--font-head); font-weight: 700; color: var(--amber); }
+  .overdue-item .oi-date { color: var(--red); font-weight: 600; }
+
+  /* Toolbar */
+  .toolbar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 16px; margin: -32px -40px 28px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .toolbar-brand {
+    font-family: var(--font-head); font-size: 13px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); flex: 1;
+  }
+  .tb-btn {
+    font-family: var(--font-head); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 5px 14px;
+    border: 1px solid var(--border); background: none;
+    color: var(--muted); cursor: pointer; text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .tb-btn:hover { border-color: var(--text); color: var(--text); }
+  .tb-btn.primary { border-color: var(--blue); color: var(--blue); }
+  .tb-btn.primary:hover { background: var(--blue); color: var(--bg); }
+
+  @media print {
+    .toolbar { display: none; }
+    body { padding: 20px; max-width: 100%; }
+    .finding-block { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <a href="/experience" class="tb-btn" style="text-decoration:none;">&#8592; Module</a>
+  <a href="/" class="tb-btn" style="text-decoration:none;">&#8592; Dashboard</a>
+  <div class="toolbar-brand">READ-ONLY REPORT — SENTINEL 001 ECS</div>
+  <button class="tb-btn" id="btn-csv">Download CSV</button>
+  <button class="tb-btn primary" onclick="window.print()">Export as PDF</button>
+</div>
+
+<div class="report-header">
+  <div>
+    <div class="report-title">Sentinel 001<br>Experience Conflict Register</div>
+    <div class="report-subtitle">Module 1 — Conflict Discovery &amp; Disposition Tracker</div>
+  </div>
+  <div class="report-meta">
+    <div class="date">{{ today }}</div>
+    <div>Generated by DNV Bastion Coordinator</div>
+    <div style="margin-top:4px;color:var(--red);font-weight:600;">READ-ONLY</div>
+  </div>
+</div>
+
+<!-- Executive Summary -->
+<div class="section-title">Executive Summary</div>
+<div class="summary-grid">
+  <div class="summary-card">
+    <div class="sc-label">Total Findings</div>
+    <div class="sc-val blue">{{ summary.total_findings }}</div>
+  </div>
+  <div class="summary-card">
+    <div class="sc-label">Open</div>
+    <div class="sc-val amber">{{ summary.open_count }}</div>
+  </div>
+  <div class="summary-card">
+    <div class="sc-label">Critical</div>
+    <div class="sc-val red">{{ summary.critical_count }}</div>
+  </div>
+  <div class="summary-card">
+    <div class="sc-label">Overdue Dispositions</div>
+    <div class="sc-val {% if summary.overdue_dispositions %}red{% else %}green{% endif %}">
+      {{ summary.overdue_dispositions | length }}
+    </div>
+  </div>
+</div>
+
+<!-- Findings Summary Table -->
+<div class="section-title">Findings Register — Summary</div>
+{% if findings %}
+<table class="findings-table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Title</th>
+      <th>Criticality</th>
+      <th>Status</th>
+      <th>Dimensions</th>
+      <th>Dispositions</th>
+      <th>ACT Ref</th>
+      <th>TQ Ref</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in findings %}
+    {% set ca = f.conflict_analysis or {} %}
+    {% set crit = (ca.criticality or 'PLANNING') | lower %}
+    <tr>
+      <td><strong style="color:var(--amber);">{{ f.finding_id }}</strong></td>
+      <td>{{ f.title }}</td>
+      <td><span class="badge badge-{{ crit }}">{{ ca.criticality or '—' }}</span></td>
+      <td><span class="badge badge-{{ f.status | lower | replace('acceptedrisk','deferred') }}">{{ f.status }}</span></td>
+      <td>{{ (f.dimensions_affected or []) | join(', ') }}</td>
+      <td>
+        {% set disps = f.dispositions or [] %}
+        {% set closed = disps | selectattr('status','equalto','Closed') | list | length %}
+        {{ closed }}/{{ disps | length }}
+      </td>
+      <td>{{ f.action_tracker_ref or '—' }}</td>
+      <td>{{ f.tq_ref or '—' }}</td>
+      <td>{{ f.created_date }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:var(--muted);font-size:12px;margin-bottom:28px;">No findings recorded.</p>
+{% endif %}
+
+<!-- Overdue Dispositions -->
+{% if summary.overdue_dispositions %}
+<div class="section-title" style="color:var(--red);">Overdue Dispositions</div>
+<div class="overdue-list">
+  {% for od in summary.overdue_dispositions %}
+  <div class="overdue-item">
+    <span class="oi-id">{{ od.finding_id }}</span>
+    <span>{{ od.disposition_id }}</span>
+    <span>Assignee: {{ od.assignee or '—' }}</span>
+    <span class="oi-date">Due: {{ od.planned_closure_date }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Detailed Findings by Criticality -->
+{% for crit_level in ['CRITICAL', 'OPERATIONAL', 'PLANNING', 'DESIGN'] %}
+{% set level_findings = findings | selectattr('conflict_analysis.criticality', 'equalto', crit_level) | list %}
+{% if level_findings %}
+<div class="section-title">{{ crit_level }} Findings ({{ level_findings | length }})</div>
+{% for f in level_findings %}
+{% set ca = f.conflict_analysis or {} %}
+{% set crit_class = crit_level | lower %}
+<div class="finding-block {{ crit_class }}">
+  <div class="fb-header">
+    <span class="fb-id">{{ f.finding_id }}</span>
+    <span class="fb-title">{{ f.title }}</span>
+    <span class="badge badge-{{ crit_class }}">{{ crit_level }}</span>
+    <span class="badge badge-{{ f.status | lower | replace('acceptedrisk','deferred') }}">{{ f.status }}</span>
+    {% if f.action_tracker_ref %}<span class="badge" style="border:1px solid var(--green);color:var(--green);background:none;">{{ f.action_tracker_ref }}</span>{% endif %}
+    {% if f.tq_ref %}<span class="badge" style="border:1px solid var(--amber);color:var(--amber);background:none;">{{ f.tq_ref }}</span>{% endif %}
+  </div>
+  <div class="fb-expectation">{{ f.customer_expectation }}</div>
+  {% if f.dimensions_affected %}
+  <div class="fb-dims">
+    {% for d in f.dimensions_affected %}<span class="dim-tag">{{ d }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% set checks = ca.single_dimension_checks or [] %}
+  {% if checks %}
+  <div style="font-family:var(--font-head);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Constraint Checks ({{ checks | length }})</div>
+  {% for c in checks %}
+  <div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;">
+    <span style="color:var(--muted);font-size:10px;min-width:60px;">{{ c.constraint_id }}</span>
+    <div>
+      <span class="badge {% if c.classification == 'HARD_BLOCK' %}badge-critical{% elif c.classification == 'SOFT_CONFLICT' %}badge-operational{% elif c.classification == 'COMPATIBLE_WITH_MARGIN' %}" style="background:var(--green);color:#000;{% else %}" style="background:#CA8A04;color:#fff;{% endif %}">{{ c.classification | replace('_',' ') }}</span>
+      <span style="margin-left:6px;color:var(--muted);">{{ c.constraint_name }}</span>
+      <div style="color:var(--text);margin-top:2px;">{{ c.explanation }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% set disps = f.dispositions or [] %}
+  {% if disps %}
+  <table class="disp-table" style="margin-top:12px;">
+    <thead>
+      <tr><th>ID</th><th>Type</th><th>Assignee</th><th>Planned Close</th><th>Status</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      {% for d in disps %}
+      {% set overdue = d.status != 'Closed' and d.planned_closure_date and d.planned_closure_date < today %}
+      <tr {% if overdue %}class="overdue"{% endif %}>
+        <td>{{ d.disposition_id }}</td>
+        <td>{{ d.type }}</td>
+        <td>{{ d.assignee or '—' }}</td>
+        <td {% if overdue %}style="color:var(--red);font-weight:600;"{% endif %}>{{ d.planned_closure_date or '—' }}</td>
+        <td>{{ d.status }}</td>
+        <td>{{ d.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);text-align:center;">
+  Generated by DNV Bastion Coordinator — Sentinel 001 Experience Conflict System — {{ today }} — READ-ONLY
+</div>
+
+<script>
+(function() {
+  // CSV download
+  document.getElementById('btn-csv').addEventListener('click', function() {
+    const findings = {{ findings | tojson }};
+    const rows = [['FindingID','Title','Criticality','Status','Dimensions','Dispositions','ACTRef','TQRef','Created']];
+    findings.forEach(function(f) {
+      const ca = f.conflict_analysis || {};
+      const disps = f.dispositions || [];
+      const closed = disps.filter(d => d.status === 'Closed').length;
+      rows.push([
+        f.finding_id, f.title,
+        ca.criticality || '',
+        f.status,
+        (f.dimensions_affected || []).join('; '),
+        closed + '/' + disps.length,
+        f.action_tracker_ref || '',
+        f.tq_ref || '',
+        f.created_date || ''
+      ]);
+    });
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sentinel001_conflict_register.csv';
+    a.click();
+  });
+})();
+</script>
+</body>
+</html>

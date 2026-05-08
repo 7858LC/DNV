@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV BASTION · SUBMISSIONS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #2563EB;
+  --blue-lt:  #60A5FA;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text);
+  font-family: var(--font-data); font-size: 13px; line-height: 1.4; overflow: hidden; }
+
+/* ── SHELL ── */
+#shell { display: grid; grid-template-rows: 48px 40px 1fr; height: 100vh; overflow: hidden; }
+
+/* ── TOPBAR ── */
+#topbar { background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+#topbar .brand { font-family: var(--font-head); font-size: 18px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+#topbar .brand span { color: var(--muted); font-weight: 400; }
+#topbar .page-tag { font-family: var(--font-head); font-size: 13px; font-weight: 600;
+  letter-spacing: .1em; color: var(--blue-lt); text-transform: uppercase;
+  padding: 3px 10px; border: 1px solid rgba(96,165,250,.3);
+  border-radius: 3px; white-space: nowrap; }
+#topbar .spacer { flex: 1; }
+.btn { font-family: var(--font-head); font-size: 13px; font-weight: 700;
+  letter-spacing: .1em; padding: 5px 14px; border-radius: 3px; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap;
+  background: none; border: 1px solid var(--muted); color: var(--muted);
+  transition: all .15s; }
+.btn:hover { border-color: var(--text); color: var(--text); }
+.btn.primary { border-color: var(--blue); color: var(--blue-lt); }
+.btn.primary:hover { background: rgba(37,99,235,.15); }
+
+/* ── FILTER BAR ── */
+#filterbar { background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 10px; }
+.filter-input { font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 10px; border-radius: 3px; width: 240px; outline: none; }
+.filter-input:focus { border-color: var(--blue); }
+.filter-select { font-family: var(--font-data); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 3px; outline: none; cursor: pointer; }
+.filter-sep { flex: 1; }
+.stat-pill { font-family: var(--font-head); font-size: 12px; font-weight: 600;
+  letter-spacing: .08em; padding: 2px 10px; border-radius: 12px; }
+.stat-pill.open   { background: rgba(239,68,68,.12);  color: var(--red); }
+.stat-pill.amber  { background: rgba(245,158,11,.12); color: var(--amber); }
+.stat-pill.closed { background: rgba(34,197,94,.12);  color: var(--green); }
+
+/* ── MAIN AREA ── */
+#main { display: grid; grid-template-columns: 1fr 340px; overflow: hidden; }
+
+/* ── TABLE PANE ── */
+#table-pane { overflow-y: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table thead tr { background: var(--surface); position: sticky; top: 0; z-index: 10; }
+.data-table th { padding: 8px 10px; text-align: left; font-family: var(--font-head);
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--muted);
+  border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer;
+  user-select: none; }
+.data-table th:hover { color: var(--text); }
+.data-table td { padding: 7px 10px; border-bottom: 1px solid rgba(30,45,69,.6);
+  vertical-align: top; }
+.data-table tr { cursor: pointer; transition: background .1s; }
+.data-table tr:hover { background: var(--surface2); }
+.data-table tr.selected { background: rgba(37,99,235,.12); }
+
+/* ── STATUS BADGES ── */
+.status-badge { display: inline-block; font-family: var(--font-head); font-size: 10px;
+  font-weight: 700; letter-spacing: .07em; padding: 2px 8px; border-radius: 3px;
+  white-space: nowrap; text-transform: uppercase; }
+.status-Draft             { background: rgba(107,114,128,.15); color: var(--muted); border: 1px solid rgba(107,114,128,.3); }
+.status-Internal-Review   { background: rgba(37,99,235,.15);   color: var(--blue-lt); border: 1px solid rgba(37,99,235,.3); }
+.status-Submitted-to-DNV  { background: rgba(245,158,11,.12);  color: var(--amber);   border: 1px solid rgba(245,158,11,.3); }
+.status-Under-DNV-Review  { background: rgba(245,158,11,.12);  color: var(--amber);   border: 1px solid rgba(245,158,11,.3); }
+.status-Comments-Issued   { background: rgba(239,68,68,.12);   color: var(--red);     border: 1px solid rgba(239,68,68,.3); }
+.status-Response-Submitted{ background: rgba(37,99,235,.15);   color: var(--blue-lt); border: 1px solid rgba(37,99,235,.3); }
+.status-Closed            { background: rgba(34,197,94,.1);    color: var(--green);   border: 1px solid rgba(34,197,94,.3); }
+
+/* ── TRANSITION BUTTONS ── */
+.tx-wrap { display: flex; gap: 4px; flex-wrap: wrap; }
+.tx-btn { font-family: var(--font-head); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; padding: 2px 8px; border-radius: 3px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+  transition: all .15s; white-space: nowrap; }
+.tx-btn:hover { border-color: var(--blue-lt); color: var(--blue-lt); background: rgba(37,99,235,.1); }
+.tx-btn.back { border-color: rgba(239,68,68,.3); color: var(--red); }
+.tx-btn.back:hover { background: rgba(239,68,68,.1); }
+
+/* ── HISTORY PANEL ── */
+#history-panel { border-left: 1px solid var(--border); background: var(--surface);
+  display: flex; flex-direction: column; overflow: hidden; }
+#history-header { padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-head); font-size: 13px; font-weight: 700;
+  letter-spacing: .08em; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+#history-doc-label { color: var(--text); font-size: 11px; font-weight: 400;
+  font-family: var(--font-data); }
+#history-body { flex: 1; overflow-y: auto; padding: 10px 14px; }
+.hist-empty { color: var(--muted); font-size: 11px; padding: 20px 0; text-align: center; }
+.hist-event { border-left: 2px solid var(--border); padding: 8px 12px; margin-bottom: 10px;
+  position: relative; }
+.hist-event::before { content: ''; position: absolute; left: -5px; top: 10px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.hist-event.latest { border-color: var(--blue); }
+.hist-event.latest::before { background: var(--blue-lt); }
+.hist-arrow { font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  letter-spacing: .06em; }
+.hist-arrow .from { color: var(--muted); }
+.hist-arrow .arr  { color: var(--border); margin: 0 5px; }
+.hist-arrow .to   { color: var(--text); }
+.hist-meta { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.hist-note { font-size: 11px; color: #9CA3AF; margin-top: 4px;
+  font-style: italic; padding: 4px 8px; background: var(--surface2);
+  border-radius: 3px; }
+
+/* ── TRANSITION CONFIRM MODAL ── */
+#tx-modal-overlay { position: fixed; inset: 0; z-index: 8000;
+  background: rgba(7,10,20,.85); display: flex; align-items: center;
+  justify-content: center; backdrop-filter: blur(3px); }
+#tx-modal-overlay.hidden { display: none; }
+#tx-modal { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 28px 32px; width: 440px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.5); }
+#tx-modal .tx-title { font-family: var(--font-head); font-size: 16px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+#tx-modal .tx-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+#tx-modal .tx-label { font-size: 10px; color: var(--muted); letter-spacing: .08em;
+  text-transform: uppercase; margin-bottom: 5px; }
+#tx-note { width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--font-data); font-size: 12px;
+  padding: 8px 10px; border-radius: 4px; resize: vertical; min-height: 70px;
+  outline: none; margin-bottom: 18px; }
+#tx-note:focus { border-color: var(--blue); }
+.tx-modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.tx-confirm-btn { font-family: var(--font-head); font-size: 14px; font-weight: 700;
+  letter-spacing: .09em; padding: 8px 20px; border-radius: 4px; cursor: pointer;
+  border: none; background: var(--blue); color: #fff; transition: background .15s; }
+.tx-confirm-btn:hover { background: #1D4ED8; }
+.tx-cancel-btn { font-family: var(--font-head); font-size: 14px; font-weight: 700;
+  letter-spacing: .09em; padding: 8px 20px; border-radius: 4px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--muted); }
+.tx-cancel-btn:hover { border-color: var(--muted); color: var(--text); }
+.tx-err { font-size: 11px; color: var(--red); margin-bottom: 12px; display: none; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <!-- ── TOPBAR ── -->
+  <header id="topbar">
+    <div class="brand">DNV <span>BASTION</span></div>
+    <div class="page-tag">SUBMISSIONS</div>
+    <div class="spacer"></div>
+    <a href="/" class="btn">← DASHBOARD</a>
+    <a href="/coordinator" class="btn">COORDINATOR</a>
+    <a href="/docreq" class="btn">DOC REQUIREMENTS</a>
+  </header>
+
+  <!-- ── FILTER BAR ── -->
+  <div id="filterbar">
+    <input class="filter-input" id="srch" type="text" placeholder="Search documents…" oninput="applyFilters()">
+    <select class="filter-select" id="flt-status" onchange="applyFilters()">
+      <option value="">All Statuses</option>
+      <option>Draft</option>
+      <option>Internal Review</option>
+      <option>Submitted to DNV</option>
+      <option>Under DNV Review</option>
+      <option>Comments Issued</option>
+      <option>Response Submitted</option>
+      <option>Closed</option>
+    </select>
+    <select class="filter-select" id="flt-type" onchange="applyFilters()">
+      <option value="">All Types</option>
+    </select>
+    <div class="filter-sep"></div>
+    <span class="stat-pill open"   id="pill-open">—</span>
+    <span class="stat-pill amber"  id="pill-progress">—</span>
+    <span class="stat-pill closed" id="pill-closed">—</span>
+  </div>
+
+  <!-- ── MAIN ── -->
+  <div id="main">
+
+    <!-- Table -->
+    <div id="table-pane">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th onclick="sortBy('DocumentNumber')">DOC NUMBER</th>
+            <th onclick="sortBy('DocumentTitle')">TITLE</th>
+            <th onclick="sortBy('Revision')">REV</th>
+            <th onclick="sortBy('DocumentType')">TYPE</th>
+            <th onclick="sortBy('SubmittingEngineer')">ENGINEER</th>
+            <th onclick="sortBy('SubmittedDate')">SUBMITTED</th>
+            <th onclick="sortBy('Status')">STATUS</th>
+            <th>MOVE TO</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- History panel -->
+    <div id="history-panel">
+      <div id="history-header">
+        TRANSITION LOG
+        <span id="history-doc-label"></span>
+      </div>
+      <div id="history-body">
+        <div class="hist-empty">Select a document to view its history.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TRANSITION CONFIRM MODAL ── -->
+<div id="tx-modal-overlay" class="hidden">
+  <div id="tx-modal">
+    <div class="tx-title" id="tx-modal-title">CONFIRM TRANSITION</div>
+    <div class="tx-sub"   id="tx-modal-sub"></div>
+    <div class="tx-label">Note (optional)</div>
+    <textarea id="tx-note" placeholder="Add a note about this transition…"></textarea>
+    <div class="tx-err" id="tx-err"></div>
+    <div class="tx-modal-btns">
+      <button class="tx-cancel-btn"  onclick="closeTxModal()">CANCEL</button>
+      <button class="tx-confirm-btn" onclick="confirmTransition()">CONFIRM ›</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+<script>
+'use strict';
+
+/* ── State ── */
+let ALL_ROWS   = [];
+let WORKFLOW   = { map: {}, colors: {}, roles: {} };
+let USER_ROLE  = '';
+let SORT_KEY   = 'SubmittedDate';
+let SORT_ASC   = false;
+let SEL_DOC    = null;
+let TX_PENDING = null;  // { docNumber, fromStatus, toStatus }
+
+/* ── Boot ── */
+async function boot() {
+  await Promise.all([loadWorkflow(), loadData()]);
+  // Get role from auth.js identity
+  if (window.getIdentity) {
+    const id = window.getIdentity();
+    USER_ROLE = id.role || '';
+  }
+  populateTypeFilter();
+  updatePills();
+  renderTable();
+}
+
+async function loadWorkflow() {
+  try {
+    const res = await fetch('/api/submissions/workflow');
+    WORKFLOW = await res.json();
+  } catch(e) { console.warn('workflow fetch failed', e); }
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/csv/submissions');
+    ALL_ROWS = (await res.json()) || [];
+  } catch(e) { console.warn('submissions fetch failed', e); }
+}
+
+/* ── Filters ── */
+function applyFilters() { renderTable(); updatePills(); }
+
+function filtered() {
+  const srch   = document.getElementById('srch').value.trim().toLowerCase();
+  const status = document.getElementById('flt-status').value;
+  const type   = document.getElementById('flt-type').value;
+  return ALL_ROWS.filter(r => {
+    if (status && r.Status !== status) return false;
+    if (type   && r.DocumentType !== type) return false;
+    if (srch) {
+      const hay = [r.DocumentNumber, r.DocumentTitle, r.SubmittingEngineer,
+                   r.Notes, r.Status].join(' ').toLowerCase();
+      if (!hay.includes(srch)) return false;
+    }
+    return true;
+  });
+}
+
+function sortBy(key) {
+  if (SORT_KEY === key) SORT_ASC = !SORT_ASC;
+  else { SORT_KEY = key; SORT_ASC = true; }
+  renderTable();
+}
+
+function sorted(rows) {
+  return [...rows].sort((a, b) => {
+    const va = String(a[SORT_KEY] || '');
+    const vb = String(b[SORT_KEY] || '');
+    return SORT_ASC ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+}
+
+function populateTypeFilter() {
+  const sel = document.getElementById('flt-type');
+  const types = [...new Set(ALL_ROWS.map(r => r.DocumentType).filter(Boolean))].sort();
+  types.forEach(t => {
+    const o = document.createElement('option');
+    o.value = o.textContent = t;
+    sel.appendChild(o);
+  });
+}
+
+function updatePills() {
+  const rows = ALL_ROWS;
+  const open     = rows.filter(r => ['Draft','Comments Issued'].includes(r.Status)).length;
+  const progress = rows.filter(r => ['Internal Review','Submitted to DNV','Under DNV Review','Response Submitted'].includes(r.Status)).length;
+  const closed   = rows.filter(r => r.Status === 'Closed').length;
+  document.getElementById('pill-open').textContent     = open     + ' NEED ACTION';
+  document.getElementById('pill-progress').textContent = progress + ' IN PROGRESS';
+  document.getElementById('pill-closed').textContent   = closed   + ' CLOSED';
+}
+
+/* ── Render table ── */
+function renderTable() {
+  const rows = sorted(filtered());
+  const tb   = document.getElementById('tbody');
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--muted)">No documents match the current filter.</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(r => {
+    const statusCls = 'status-' + (r.Status||'').replace(/\s+/g,'-');
+    const txBtns    = buildTxButtons(r);
+    const isSelected = SEL_DOC === r.DocumentNumber;
+    return `<tr onclick="selectDoc('${esc(r.DocumentNumber)}')"
+                class="${isSelected ? 'selected' : ''}">
+      <td><span style="font-family:var(--font-data);font-size:11px">${esc(r.DocumentNumber||'—')}</span></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          title="${esc(r.DocumentTitle)}">${esc(r.DocumentTitle||'—')}</td>
+      <td style="color:var(--muted)">${esc(r.Revision||'—')}</td>
+      <td style="color:var(--muted)">${esc(r.DocumentType||'—')}</td>
+      <td style="color:var(--muted)">${esc(r.SubmittingEngineer||'—')}</td>
+      <td style="color:var(--muted);white-space:nowrap">${esc(r.SubmittedDate||'—')}</td>
+      <td><span class="status-badge ${statusCls}">${esc(r.Status||'—')}</span></td>
+      <td><div class="tx-wrap">${txBtns}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function buildTxButtons(r) {
+  const map     = WORKFLOW.map || {};
+  const targets = map[r.Status] || [];
+  if (!targets.length) return '<span style="color:var(--muted);font-size:10px">—</span>';
+
+  // Filter by role using workflow.roles (key: "from→to")
+  const allowed = targets.filter(t => {
+    const key    = `${r.Status}→${t}`;
+    const roles  = (WORKFLOW.roles || {})[key] || [];
+    return !USER_ROLE || roles.includes(USER_ROLE);
+  });
+
+  if (!allowed.length)
+    return '<span style="color:var(--muted);font-size:10px">NO ACTIONS</span>';
+
+  return allowed.map(t => {
+    const isBack = t === 'Draft';
+    return `<button class="tx-btn${isBack?' back':''}"
+      onclick="event.stopPropagation();openTxModal('${esc(r.DocumentNumber)}','${esc(r.Status)}','${esc(t)}')"
+    >${esc(t)} ›</button>`;
+  }).join('');
+}
+
+/* ── Doc selection + history ── */
+async function selectDoc(docNumber) {
+  SEL_DOC = docNumber;
+  renderTable(); // refresh selected highlight
+  document.getElementById('history-doc-label').textContent = docNumber;
+  await loadHistory(docNumber);
+}
+
+async function loadHistory(docNumber) {
+  const body = document.getElementById('history-body');
+  body.innerHTML = '<div class="hist-empty">Loading…</div>';
+  try {
+    const res  = await fetch(`/api/submissions/${encodeURIComponent(docNumber)}/history`);
+    const hist = await res.json();
+    if (!hist.length) {
+      body.innerHTML = '<div class="hist-empty">No transitions recorded yet.</div>';
+      return;
+    }
+    body.innerHTML = hist.map((h, i) => `
+      <div class="hist-event ${i===0?'latest':''}">
+        <div class="hist-arrow">
+          <span class="from">${esc(h.from_status)}</span>
+          <span class="arr">→</span>
+          <span class="to">${esc(h.to_status)}</span>
+        </div>
+        <div class="hist-meta">
+          ${esc(h.changed_by||'Unknown')} &middot;
+          ${window.formatTS ? window.formatTS(h.changed_at) : esc(h.changed_at)}
+        </div>
+        ${h.note ? `<div class="hist-note">${esc(h.note)}</div>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    body.innerHTML = '<div class="hist-empty" style="color:var(--red)">Failed to load history.</div>';
+  }
+}
+
+/* ── Transition modal ── */
+function openTxModal(docNumber, fromStatus, toStatus) {
+  TX_PENDING = { docNumber, fromStatus, toStatus };
+  document.getElementById('tx-modal-title').textContent = 'CONFIRM TRANSITION';
+  document.getElementById('tx-modal-sub').innerHTML =
+    `<strong>${esc(docNumber)}</strong><br>
+     <span style="color:var(--muted)">${esc(fromStatus)}</span>
+     <span style="margin:0 6px;color:var(--border)">→</span>
+     <strong style="color:var(--blue-lt)">${esc(toStatus)}</strong>`;
+  document.getElementById('tx-note').value = '';
+  document.getElementById('tx-err').style.display  = 'none';
+  document.getElementById('tx-modal-overlay').classList.remove('hidden');
+  document.getElementById('tx-note').focus();
+}
+
+function closeTxModal() {
+  TX_PENDING = null;
+  document.getElementById('tx-modal-overlay').classList.add('hidden');
+}
+
+async function confirmTransition() {
+  if (!TX_PENDING) return;
+  const { docNumber, fromStatus, toStatus } = TX_PENDING;
+  const note    = document.getElementById('tx-note').value.trim();
+  const errEl   = document.getElementById('tx-err');
+  errEl.style.display = 'none';
+
+  try {
+    const res  = await fetch(`/api/submissions/${encodeURIComponent(docNumber)}/transition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ to_status: toStatus, note }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent    = data.error || 'Transition failed.';
+      errEl.style.display  = 'block';
+      return;
+    }
+    // Update local row
+    const row = ALL_ROWS.find(r => r.DocumentNumber === docNumber);
+    if (row) row.Status = toStatus;
+    closeTxModal();
+    renderTable();
+    updatePills();
+    if (SEL_DOC === docNumber) loadHistory(docNumber);
+  } catch(e) {
+    errEl.textContent   = 'Network error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// Close modal on overlay click
+document.getElementById('tx-modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeTxModal();
+});
+
+// ESC key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTxModal(); });
+
+/* ── Utilities ── */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Wait for auth.js to set identity, then boot ── */
+function _waitForIdentity(cb, tries) {
+  tries = tries || 0;
+  if (window.getIdentity && window.getIdentity().role) { cb(); return; }
+  if (tries > 30) { cb(); return; }  // give up after 3s, boot anyway
+  setTimeout(() => _waitForIdentity(cb, tries + 1), 100);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  _waitForIdentity(() => boot());
+});
+</script>
+</body>
+</html>

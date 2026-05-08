@@ -1,0 +1,76 @@
+{
+  "data_dir": "./data",
+  "state_dir": "./state",
+  "logs_dir": "./logs",
+  "outputs_dir": "./outputs",
+  "uploads_dir": "./uploads",
+  "csv_files": {
+    "submissions": "submissions.csv",
+    "action_tracker": "action_tracker.csv",
+    "tq_log": "tq_log.csv",
+    "audit_definitions": "audit_definitions.csv",
+    "dnv_comments": "dnv_comments.csv",
+    "document_register": "document_register.csv",
+    "dnv_doc_requirements": "dnv_doc_requirements.csv"
+  },
+  "amber_threshold": 5,
+  "stale_threshold": 7,
+  "tq_sla_days": 10,
+  "readiness_threshold": 85,
+  "routing_table": {
+    "ICD": "Structural",
+    "FMECA": "Safety",
+    "MTP": "Marine",
+    "AIP": "Electrical",
+    "HAZID": "Safety",
+    "OTHER": "General"
+  },
+  "critical_path_docs": [
+    "BT3345_9001_009",
+    "SDD-SENTINEL-001",
+    "FMECA-SENTINEL-001",
+    "VA2-0003300",
+    "VA2-0003299",
+    "VA2-0003416"
+  ],
+  "submission_statuses": [
+    "Draft",
+    "Internal Review",
+    "Submitted to DNV",
+    "Under DNV Review",
+    "Comments Issued",
+    "Response Submitted",
+    "Closed"
+  ],
+  "roles": [
+    "Bastion Engineer",
+    "Bastion Coordinator",
+    "DNV Reviewer",
+    "Admin"
+  ],
+  "teams_webhook_url": "",
+  "sla_digest_warn_bd": 8,
+  "sla_digest_breach_bd": 10,
+  "holidays": [
+    "2026-01-01",
+    "2026-01-19",
+    "2026-02-16",
+    "2026-04-02",
+    "2026-04-03",
+    "2026-04-05",
+    "2026-04-06",
+    "2026-05-01",
+    "2026-05-14",
+    "2026-05-17",
+    "2026-05-24",
+    "2026-05-25",
+    "2026-06-19",
+    "2026-07-03",
+    "2026-09-07",
+    "2026-10-12",
+    "2026-11-11",
+    "2026-11-26",
+    "2026-12-25",
+    "2026-12-26"
+  ]
+}

@@ -1,0 +1,2140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV–Bastion Interface Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --surface3: #222e42;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #3B82F6;
+  --closed:   #374151;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-x: hidden;
+}
+
+#shell {
+  display: grid;
+  grid-template-rows: 48px auto auto 1fr 36px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 0;
+  z-index: 100;
+}
+.brand {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.brand span { color: var(--muted); font-weight: 400; }
+.topbar-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-head);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  gap: 1px;
+}
+.topbar-center .page-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--blue);
+  letter-spacing: 0.1em;
+}
+.topbar-center .page-sub {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.topbar-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.health-badge {
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.health-badge.RED   { border-color: var(--red);   color: var(--red); }
+.health-badge.AMBER { border-color: var(--amber); color: var(--amber); }
+.health-badge.GREEN { border-color: var(--green); color: var(--green); }
+
+.btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 5px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--text); color: var(--text); }
+.btn.primary { border-color: var(--green); color: var(--green); }
+.btn.primary:hover { background: var(--green); color: var(--bg); }
+.btn.danger  { border-color: var(--red);   color: var(--red); }
+.btn.danger:hover  { background: var(--red);   color: var(--bg); }
+.btn.action  { border-color: var(--blue);  color: var(--blue); font-size: 11px; padding: 3px 8px; }
+.btn.action:hover  { background: var(--blue);  color: var(--bg); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.spinner {
+  width: 12px; height: 12px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TAB BAR ── */
+#tabbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  padding: 0 16px;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab-count {
+  font-size: 10px;
+  font-family: var(--font-data);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.tab-btn.active .tab-count { background: rgba(59,130,246,0.15); border-color: var(--blue); color: var(--blue); }
+
+/* ── PRIORITY RAIL ── */
+#priority-rail {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 10px;
+  height: 38px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+#priority-rail::-webkit-scrollbar { height: 2px; }
+.rail-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rail-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.rail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.rail-chip:hover { border-color: var(--text); color: var(--text); }
+.rail-chip.red   { border-color: var(--red);   color: var(--red); }
+.rail-chip.amber { border-color: var(--amber); color: var(--amber); }
+.rail-chip.green { border-color: var(--green); color: var(--green); }
+.rail-chip.ok    { border-color: var(--border); color: var(--muted); }
+.rail-chip .chip-count { font-size: 14px; line-height: 1; }
+
+/* ── MAIN ── */
+#main {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tab-panel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px 16px;
+  gap: 10px;
+  overflow: hidden;
+}
+.tab-panel.active { display: flex; }
+
+/* ── FILTER ROW ── */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.filter-context {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.filter-row input[type="text"],
+.filter-row select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+  padding: 5px 10px;
+  outline: none;
+}
+.filter-row input[type="text"]:focus,
+.filter-row select:focus { border-color: var(--blue); }
+.filter-row input[type="text"] { width: 200px; }
+.filter-row select { width: 148px; }
+.spacer { flex: 1; }
+
+/* ── DATA TABLE ── */
+.table-wrap {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--border);
+  min-height: 0;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.data-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface2);
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+.data-table th:hover { color: var(--text); }
+.data-table th.sorted { color: var(--blue); }
+.data-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #161d2a;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+.data-table tr:hover td { background: var(--surface2); }
+.data-table td.wrap { white-space: normal; line-height: 1.3; }
+.data-table td.actions-col {
+  width: 80px;
+  text-align: right;
+  padding-right: 8px;
+  white-space: nowrap;
+}
+.row-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  font-family: var(--font-head);
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  cursor: pointer;
+  margin-left: 2px;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+.row-btn:hover { border-color: var(--text); color: var(--text); }
+.row-btn.edit:hover  { border-color: var(--blue); color: var(--blue); }
+.row-btn.del:hover   { border-color: var(--red);  color: var(--red); }
+.row-btn.tq:hover    { border-color: var(--amber); color: var(--amber); }
+.row-btn.close-tq:hover { border-color: var(--green); color: var(--green); }
+
+.rag-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.rag-dot.RED    { background: var(--red); }
+.rag-dot.AMBER  { background: var(--amber); }
+.rag-dot.GREEN  { background: var(--green); }
+.rag-dot.CLOSED { background: var(--closed); }
+.col-red   { color: var(--red); }
+.col-amber { color: var(--amber); }
+.col-green { color: var(--green); }
+.col-blue  { color: var(--blue); }
+.col-muted { color: var(--muted); }
+
+/* ── DNV Rule ref tooltip ── */
+.dnv-rule-wrap { position: relative; display: inline-block; cursor: default; max-width: 140px; }
+.dnv-rule-ref  { font-family: var(--font-data); font-size: 10px; color: var(--blue);
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                 display: block; border-bottom: 1px dashed rgba(59,130,246,.4);
+                 padding-bottom: 1px; }
+.dnv-rule-tip  { display: none; position: fixed;
+                 background: #1E2A3A; border: 1px solid var(--blue); border-radius: 8px;
+                 padding: 14px 16px; width: 520px; max-height: 340px;
+                 overflow-y: auto; z-index: 99999;
+                 box-shadow: 0 12px 32px rgba(0,0,0,.7); pointer-events: none; }
+.dnv-rule-tip-ref   { font-family: var(--font-data); font-size: 10px; color: var(--blue);
+                      margin-bottom: 8px; letter-spacing: .3px; }
+.dnv-rule-tip-title { font-family: var(--font-head); font-size: 15px; font-weight: 700;
+                      color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+.dnv-rule-tip-desc  { font-size: 12px; color: #B0BAC8; line-height: 1.6;
+                      white-space: pre-wrap; word-break: break-word; }
+.dnv-rule-tip-action{ font-size: 11px; color: var(--amber); margin-top: 10px;
+                      padding-top: 8px; border-top: 1px solid rgba(245,158,11,.2); }
+.dnv-rule-wrap:hover .dnv-rule-tip { display: block; }
+
+.tier-chip {
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+}
+.tier-chip.P1 { color: var(--red); }
+.tier-chip.P2 { color: var(--amber); }
+.tier-chip.P3, .tier-chip.P4 { color: var(--muted); }
+
+.status-pill {
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+}
+.status-pill.red    { color: var(--red); }
+.status-pill.amber  { color: var(--amber); }
+.status-pill.green  { color: var(--green); }
+.status-pill.blue   { color: var(--blue); }
+.status-pill.muted  { color: var(--muted); }
+
+/* ── MODAL ── */
+#modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 500;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  overflow-y: auto;
+}
+#modal-overlay.show { display: flex; }
+#modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  width: min(680px, 95vw);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 40px;
+}
+#modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+#modal-title {
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#modal-subtitle {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-top: 2px;
+}
+#modal-close {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 10px;
+  line-height: 1;
+  align-self: flex-start;
+}
+#modal-close:hover { color: var(--text); border-color: var(--text); }
+#modal-body { padding: 18px; }
+#modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  flex-shrink: 0;
+  gap: 8px;
+}
+#modal-footer .right { display: flex; gap: 8px; }
+
+/* Form */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-section-header { grid-column: 1 / -1; font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--blue); padding: 10px 0 4px; border-bottom: 1px solid var(--border); margin-top: 6px; }
+.form-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.form-label .req { color: var(--red); margin-left: 2px; }
+.form-control {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+  padding: 7px 10px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+.form-control:focus { border-color: var(--blue); }
+.form-control.error { border-color: var(--red); }
+textarea.form-control { resize: vertical; min-height: 60px; }
+select.form-control { cursor: pointer; }
+select.form-control option { background: var(--surface2); }
+input[type="date"].form-control { cursor: pointer; color-scheme: dark; }
+
+/* ── ATTACHMENTS ── */
+.attach-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.attach-dropzone {
+  border: 1px dashed var(--border); padding: 14px 12px; text-align: center;
+  font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  color: var(--muted); cursor: pointer; transition: border-color .15s, color .15s;
+  position: relative;
+}
+.attach-dropzone:hover, .attach-dropzone.dragover { border-color: var(--blue); color: var(--blue); }
+.attach-file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.attach-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+.attach-item { display: flex; align-items: center; gap: 8px; padding: 5px 9px; background: var(--bg); border: 1px solid var(--border); }
+.attach-item a { flex: 1; font-size: 11px; font-family: var(--font-data); color: var(--blue); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.attach-item a:hover { text-decoration: underline; }
+.attach-item .attach-size { font-size: 10px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.attach-item .attach-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 0 3px; flex-shrink: 0; line-height: 1; }
+.attach-item .attach-del:hover { color: var(--red); }
+.attach-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: var(--blue); font-family: var(--font-head); letter-spacing: .04em; white-space: nowrap; cursor: pointer; }
+.attach-badge:hover { text-decoration: underline; }
+
+/* ── TOAST ── */
+#toast-container {
+  position: fixed;
+  bottom: 48px;
+  right: 16px;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  font-family: var(--font-head);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  animation: slideIn 0.2s ease, fadeOut 0.3s 2.7s ease forwards;
+}
+.toast.ok    { border-left: 3px solid var(--green); color: var(--green); }
+.toast.error { border-left: 3px solid var(--red);   color: var(--red); }
+.toast.info  { border-left: 3px solid var(--blue);  color: var(--blue); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fadeOut { to { opacity: 0; } }
+
+/* ── CONFIRM ── */
+#confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 700;
+  align-items: center;
+  justify-content: center;
+}
+#confirm-overlay.show { display: flex; }
+#confirm-dialog {
+  background: var(--surface);
+  border: 1px solid var(--red);
+  padding: 28px 24px;
+  width: min(380px, 90vw);
+  text-align: center;
+}
+#confirm-msg {
+  font-family: var(--font-head);
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+
+/* ── STATUS BAR ── */
+#statusbar {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 11px;
+}
+#statusbar .left  { flex: 1; color: var(--muted); }
+#statusbar .center {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+#statusbar .right { flex: 1; text-align: right; }
+#statusbar .right a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--border); }
+#statusbar .right a:hover { color: var(--text); }
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 14px;
+  padding: 40px;
+  letter-spacing: 0.08em;
+}
+.loading-row td {
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--font-head);
+  padding: 30px;
+  letter-spacing: 0.08em;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ── CONFIRM DIALOG ── -->
+<div id="confirm-overlay">
+  <div id="confirm-dialog">
+    <div id="confirm-msg">Delete this record?</div>
+    <div class="confirm-btns">
+      <button class="btn danger" id="confirm-yes">DELETE</button>
+      <button class="btn" onclick="closeConfirm()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast-container"></div>
+
+<!-- ── MODAL ── -->
+<div id="modal-overlay" onclick="overlayClick(event)">
+  <div id="modal">
+    <div id="modal-header">
+      <div>
+        <div id="modal-title">Edit Record</div>
+        <div id="modal-subtitle"></div>
+      </div>
+      <button id="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body">
+      <div class="form-grid" id="modal-form"></div>
+    </div>
+    <div id="modal-footer">
+      <button class="btn danger" id="modal-delete-btn" onclick="modalDelete()" style="display:none">DELETE RECORD</button>
+      <div class="right">
+        <button class="btn" onclick="closeModal()">CANCEL</button>
+        <button class="btn primary" id="modal-save-btn" onclick="modalSave()">
+          <div class="spinner" id="save-spinner"></div>
+          SAVE
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="shell">
+
+  <!-- ── TOP BAR ── -->
+  <header id="topbar">
+    <div class="brand">DNV <span>BASTION</span> COORDINATOR</div>
+    <div class="topbar-center">
+      <span class="page-title">DNV–BASTION INTERFACE</span>
+      <span class="page-sub">Assurance Interface Management · Bastion Technologies Account</span>
+    </div>
+    <div class="topbar-right">
+      <span id="health-badge" class="health-badge">—</span>
+      <a href="/" class="btn">← DASHBOARD</a>
+      <a href="/submissions" class="btn">SUBMISSIONS</a>
+      <a href="/schedule" class="btn">SCHEDULE</a>
+      <a href="/docreq" class="btn">DOC REQUIREMENTS</a>
+      <a href="/kanban" class="btn">KANBAN</a>
+      <a href="/reports" class="btn">REPORTS</a>
+      <button class="btn primary" id="run-btn" onclick="runPipeline()">
+        <div class="spinner" id="run-spinner"></div>
+        ▶ RUN PIPELINE
+      </button>
+    </div>
+  </header>
+
+  <!-- ── TAB BAR ── -->
+  <div id="tabbar">
+    <button class="tab-btn active" onclick="switchTab('submissions',this)">
+      BASTION SUBMISSIONS <span class="tab-count" id="count-submissions">—</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('actions',this)">
+      JOINT ACTIONS <span class="tab-count" id="count-actions">—</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('tqs',this)">
+      DNV TECHNICAL QUERIES <span class="tab-count" id="count-tqs">—</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('audits',this)">
+      ISO AUDITS &amp; ASSESSMENTS <span class="tab-count" id="count-audits">—</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('dnv_comments',this)">
+      DNV COMMENTS <span class="tab-count" id="count-dnv_comments">—</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('document_register',this)">
+      DOCUMENT REGISTER <span class="tab-count" id="count-document_register">—</span>
+    </button>
+  </div>
+
+  <!-- ── MORNING SYNC PRIORITY RAIL ── -->
+  <div id="priority-rail">
+    <span class="rail-label">MORNING SYNC</span>
+    <div class="rail-divider"></div>
+    <div class="rail-chip ok" id="rail-sub-chip"
+         onclick="gotoTabFilter('submissions','flt-sub-status','New')"
+         title="New Bastion submissions awaiting DNV discipline assignment">
+      <span class="chip-count" id="rail-new-subs">—</span> PENDING ASSIGNMENT
+    </div>
+    <div class="rail-chip ok" id="rail-tq-chip"
+         onclick="gotoTabFilter('tqs','flt-tq-status','Open')"
+         title="Open DNV TQs past 10-day SLA — Bastion response required">
+      <span class="chip-count" id="rail-tq-overdue">—</span> TQ RESPONSES OVERDUE
+    </div>
+    <div class="rail-chip ok" id="rail-act-chip"
+         onclick="gotoTabFilter('actions','flt-act-rag','RED')"
+         title="Action items with RED RAG status — escalation required">
+      <span class="chip-count" id="rail-act-overdue">—</span> ACTIONS OVERDUE
+    </div>
+    <div class="rail-divider"></div>
+    <div class="rail-chip ok" id="rail-audit-chip"
+         onclick="switchTabByName('audits')"
+         title="Days to next DNV independent assessment">
+      NEXT AUDIT: <span id="rail-next-audit">—</span>
+    </div>
+    <div class="spacer"></div>
+    <span id="rail-date" style="font-family:var(--font-head);font-size:10px;letter-spacing:.08em;color:var(--muted)">—</span>
+  </div>
+
+  <!-- ── MAIN ── -->
+  <main id="main">
+
+    <!-- ═══ BASTION SUBMISSIONS ═══ -->
+    <div class="tab-panel active" id="panel-submissions">
+      <div class="filter-row">
+        <input type="text" id="filter-submissions" placeholder="Search submissions…" oninput="filterTable('submissions')">
+        <select id="flt-sub-status" onchange="filterTable('submissions')">
+          <option value="">All Statuses</option>
+          <option>New</option><option>Under Triage</option>
+          <option>Submitted to DEEP</option><option>With DNV (Veracity)</option>
+          <option>TQ Issued</option><option>TQ Responded</option>
+          <option>Resubmitted to DEEP</option>
+          <option>Accepted</option><option>Accepted with Comments</option>
+          <option>Rejected</option><option>On Hold</option>
+        </select>
+        <select id="flt-sub-type" onchange="filterTable('submissions')">
+          <option value="">All Doc Types</option>
+          <option>ICD</option><option>FMECA</option><option>MTP</option>
+          <option>AIP</option><option>HAZID</option><option>OTHER</option>
+        </select>
+        <select id="flt-sub-queue" onchange="filterTable('submissions')">
+          <option value="">All DNV Disciplines</option>
+          <option>Structural</option><option>Safety</option><option>Marine</option>
+          <option>Electrical</option><option>General</option>
+        </select>
+        <span class="filter-context">Bastion PDM → Coordinator → DEEP Arena → DNV Veracity</span>
+        <div class="spacer"></div>
+        <button class="btn" onclick="triggerPDMImport()" title="Import approved documents from SolidWorks PDM CSV export">⬆ PDM IMPORT</button>
+        <input type="file" id="pdm-file-input" accept=".csv" style="display:none" onchange="runPDMImport(this)">
+        <button class="btn primary" onclick="openModal('submissions',null)">+ LOG SUBMISSION</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th onclick="sortTable('submissions','DocumentNumber')">DOC #</th>
+            <th onclick="sortTable('submissions','DocumentTitle')">DOCUMENT TITLE</th>
+            <th onclick="sortTable('submissions','Revision')">REV</th>
+            <th onclick="sortTable('submissions','DocumentType')">TYPE</th>
+            <th onclick="sortTable('submissions','SubmittingEngineer')">BASTION ENGINEER</th>
+            <th onclick="sortTable('submissions','SubmittedDate')">SUBMITTED</th>
+            <th onclick="sortTable('submissions','Status')">STATUS</th>
+            <th onclick="sortTable('submissions','DNVDisciplineQueue')">DISCIPLINE</th>
+            <th title="PDM → DEEP Arena → DNV Veracity chain status">PIPELINE</th>
+            <th title="Attached files — PDF, SolidWorks, STEP, etc.">FILES</th>
+            <th>NOTES</th>
+            <th class="actions-col">ACTIONS</th>
+          </tr></thead>
+          <tbody id="tbody-submissions">
+            <tr class="loading-row"><td colspan="12">LOADING…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ JOINT ACTIONS ═══ -->
+    <div class="tab-panel" id="panel-actions">
+      <div class="filter-row">
+        <input type="text" id="filter-actions" placeholder="Search actions…" oninput="filterTable('actions')">
+        <select id="flt-act-rag" onchange="filterTable('actions')">
+          <option value="">All RAG</option>
+          <option>RED</option><option>AMBER</option><option>GREEN</option><option>CLOSED</option>
+        </select>
+        <select id="flt-act-cat" onchange="filterTable('actions')">
+          <option value="">All Categories</option>
+          <option>Technical</option><option>Administrative</option><option>Safety</option>
+          <option>Audit</option><option>Coordination</option><option>Reporting</option>
+          <option>Experience-Conflict</option>
+        </select>
+        <span class="filter-context">Joint DNV–Bastion action register · compliance &amp; verification milestones</span>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="openModal('actions',null)">+ NEW ACTION</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th onclick="sortTable('actions','ActionID')">ACTION ID</th>
+            <th onclick="sortTable('actions','Title')">TITLE</th>
+            <th onclick="sortTable('actions','Owner')">OWNER</th>
+            <th onclick="sortTable('actions','DueDate')">DUE DATE</th>
+            <th onclick="sortTable('actions','Status')">STATUS</th>
+            <th onclick="sortTable('actions','RAGStatus')">RAG</th>
+            <th onclick="sortTable('actions','LastUpdated')">LAST UPDATED</th>
+            <th onclick="sortTable('actions','Category')">CATEGORY</th>
+            <th>NOTES</th>
+            <th class="actions-col">ACTIONS</th>
+          </tr></thead>
+          <tbody id="tbody-actions">
+            <tr class="loading-row"><td colspan="10">LOADING…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ DNV TECHNICAL QUERIES ═══ -->
+    <div class="tab-panel" id="panel-tqs">
+      <div class="filter-row">
+        <input type="text" id="filter-tqs" placeholder="Search TQs…" oninput="filterTable('tqs')">
+        <select id="flt-tq-tier" onchange="filterTable('tqs')">
+          <option value="">All Escalation Tiers</option>
+          <option>P1</option><option>P2</option><option>P3</option><option>P4</option>
+        </select>
+        <select id="flt-tq-status" onchange="filterTable('tqs')">
+          <option value="">All Statuses</option>
+          <option>Open</option><option>Responded</option><option>Closed</option>
+        </select>
+        <span class="filter-context">Queries raised by DNV reviewers · Bastion response required</span>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="openModal('tqs',null)">+ LOG TQ</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th onclick="sortTable('tqs','TQID')">TQ ID</th>
+            <th onclick="sortTable('tqs','Subject')">SUBJECT</th>
+            <th onclick="sortTable('tqs','OriginatingReviewer')">DNV REVIEWER</th>
+            <th onclick="sortTable('tqs','SourceDocumentNumber')">BASTION DOC</th>
+            <th onclick="sortTable('tqs','DateOpened')">RAISED</th>
+            <th onclick="sortTable('tqs','DateResponded')">RESPONDED</th>
+            <th onclick="sortTable('tqs','Status')">STATUS</th>
+            <th onclick="sortTable('tqs','ResponseOwner')">BASTION OWNER</th>
+            <th onclick="sortTable('tqs','EscalationTier')">TIER</th>
+            <th>NOTES</th>
+            <th class="actions-col">ACTIONS</th>
+          </tr></thead>
+          <tbody id="tbody-tqs">
+            <tr class="loading-row"><td colspan="11">LOADING…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ ISO AUDITS & ASSESSMENTS ═══ -->
+    <div class="tab-panel" id="panel-audits">
+      <div class="filter-row">
+        <input type="text" id="filter-audits" placeholder="Search audits…" oninput="filterTable('audits')">
+        <select id="flt-aud-status" onchange="filterTable('audits')">
+          <option value="">All Statuses</option>
+          <option>Active</option><option>Upcoming</option><option>Complete</option>
+        </select>
+        <span class="filter-context">DNV independent assessments · ISO audit schedule &amp; readiness prerequisites</span>
+        <div class="spacer"></div>
+        <button class="btn primary" onclick="openModal('audits',null)">+ NEW AUDIT</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th onclick="sortTable('audits','AuditID')">AUDIT ID</th>
+            <th onclick="sortTable('audits','AuditName')">AUDIT / ASSESSMENT NAME</th>
+            <th onclick="sortTable('audits','AuditDate')">SCHEDULED DATE</th>
+            <th onclick="sortTable('audits','Status')">STATUS</th>
+            <th onclick="sortTable('audits','ReadinessScore')">READINESS</th>
+            <th onclick="sortTable('audits','ReadinessStatus')">GATE</th>
+            <th>SCOPE</th>
+            <th>REQUIRED EVIDENCE (BASTION)</th>
+            <th class="actions-col">ACTIONS</th>
+          </tr></thead>
+          <tbody id="tbody-audits">
+            <tr class="loading-row"><td colspan="9">LOADING…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ DNV COMMENTS ═══ -->
+    <div class="tab-panel" id="panel-dnv_comments">
+      <div class="filter-row">
+        <input type="text" id="filter-dnv_comments" placeholder="Search comments…" oninput="filterTable('dnv_comments')">
+        <select id="flt-dnvc-status" onchange="filterTable('dnv_comments')">
+          <option value="">All Statuses</option>
+          <option>Open</option><option>Closed</option>
+        </select>
+        <select id="flt-dnvc-type" onchange="filterTable('dnv_comments')">
+          <option value="">All Types</option>
+          <option>Action Required</option><option>For Information</option><option>For Approval</option>
+        </select>
+        <button id="new-comment-btn" onclick="openNewCommentModal()"
+          style="font-family:var(--font-head);font-size:12px;font-weight:700;letter-spacing:.08em;
+                 padding:4px 14px;border-radius:3px;cursor:pointer;border:1px solid var(--green);
+                 background:rgba(34,197,94,.08);color:var(--green);margin-left:auto">
+          + NEW COMMENT
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th onclick="sortTable('dnv_comments','CommentID')">COMMENT ID</th>
+            <th onclick="sortTable('dnv_comments','Status')">STATUS</th>
+            <th onclick="sortTable('dnv_comments','Type')">TYPE</th>
+            <th onclick="sortTable('dnv_comments','Title')">TITLE</th>
+            <th onclick="sortTable('dnv_comments','Discipline')">DISCIPLINE</th>
+            <th onclick="sortTable('dnv_comments','RuleRef')">RULE REF</th>
+            <th onclick="sortTable('dnv_comments','IssueDate')">ISSUED</th>
+            <th onclick="sortTable('dnv_comments','IssuedBy')">ISSUED BY</th>
+            <th onclick="sortTable('dnv_comments','ActionNeededBy')">ACTION BY</th>
+            <th onclick="sortTable('dnv_comments','LinkedDocuments')">LINKED DOC</th>
+          </tr></thead>
+          <tbody id="tbody-dnv_comments">
+            <tr class="loading-row"><td colspan="10">LOADING…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ DOCUMENT REGISTER ═══ -->
+    <div class="tab-panel" id="panel-document_register">
+      <div class="filter-row">
+        <input type="text" id="filter-document_register" placeholder="Search documents…" oninput="filterTable('document_register')">
+        <select id="flt-dr-subsystem" onchange="filterTable('document_register')">
+          <option value="">All Subsystems</option>
+        </select>
+        <select id="flt-dr-status" onchange="filterTable('document_register')">
+          <option value="">All DNV Statuses</option>
+          <option>For Info</option><option>For Approval</option><option>Action Required</option><option>Approved</option>
+        </select>
+        <select id="flt-dr-complete" onchange="filterTable('document_register')">
+          <option value="">All</option>
+          <option value="Yes">Complete</option><option value="No">Incomplete</option>
+        </select>
+        <span class="filter-context">479 documents across 9 subsystems · read-only</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th onclick="sortTable('document_register','Subsystem')">SUBSYSTEM</th>
+            <th onclick="sortTable('document_register','VendorDocNumber')">DOC NUMBER</th>
+            <th onclick="sortTable('document_register','Description')">DESCRIPTION</th>
+            <th onclick="sortTable('document_register','Owner')">OWNER</th>
+            <th onclick="sortTable('document_register','Version')">VER</th>
+            <th onclick="sortTable('document_register','DNVStatus')">DNV STATUS</th>
+            <th onclick="sortTable('document_register','DocumentComplete')">COMPLETE</th>
+            <th onclick="sortTable('document_register','DNVSubmitted')">SUBMITTED</th>
+            <th onclick="sortTable('document_register','OpenComments')" title="Open DNV comments">OPEN</th>
+            <th onclick="sortTable('document_register','OpenUniqueComments')" title="Open unique DNV comments">UNIQUE</th>
+          </tr></thead>
+          <tbody id="tbody-document_register">
+            <tr class="loading-row"><td colspan="10">LOADING…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── STATUS BAR ── -->
+  <footer id="statusbar">
+    <div class="left" id="sb-status">Ready</div>
+    <div class="center">DNV BASTION COORDINATOR · ASSURANCE INTERFACE MANAGEMENT</div>
+    <div class="right"><a href="/logs/session_log.json" target="_blank">Session Log ↗</a></div>
+  </footer>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+const DATA = { submissions:[], actions:[], tqs:[], audits:[], dnv_comments:[], document_register:[] };
+const SORT = {};
+const ATTACH_COUNTS = {};    // {DocumentNumber: fileCount}
+let modalCtx = null;
+let pendingDelete = null;
+
+/* ═══════════════════════════════════════════════════════
+   FORM DEFINITIONS
+   Labels reflect the DNV-Bastion interface context.
+═══════════════════════════════════════════════════════ */
+const FORM_DEFS = {
+  submissions: [
+    // ── Bastion / PDM origin ──────────────────────────────
+    {f:'DocumentNumber',     l:'Bastion Document Number',         t:'text',   req:true},
+    {f:'Revision',           l:'Revision',                        t:'text',   req:true},
+    {f:'DocumentTitle',      l:'Document Title',                  t:'text',   req:true, full:true},
+    {f:'DocumentType',       l:'Document Type',                   t:'select', opts:['ICD','FMECA','MTP','AIP','HAZID','OTHER']},
+    {f:'SubmittingEngineer', l:'Bastion Submitting Engineer',     t:'text'},
+    {f:'SubmittedDate',      l:'Date Formally Submitted to Coordinator', t:'date'},
+    {f:'DNVDisciplineQueue', l:'DNV Discipline Queue',            t:'select', opts:['Structural','Safety','Marine','Electrical','General']},
+    // ── PDM provenance ────────────────────────────────────
+    {f:'PDMDocumentNumber',  l:'SolidWorks PDM Document Number',  t:'text',   grp:'PDM PROVENANCE'},
+    {f:'PDMApprovalDate',    l:'PDM Approval Date',               t:'date'},
+    {f:'PDMApprover',        l:'PDM Approving Engineer (Bastion)',t:'text'},
+    // ── DEEP Arena ───────────────────────────────────────
+    {f:'DEEPArenaRef',       l:'DEEP Arena Reference Number',     t:'text',   grp:'DEEP ARENA → DNV VERACITY'},
+    {f:'DEEPSubmitDate',     l:'Date Submitted to DEEP Arena',    t:'date'},
+    {f:'VeracityRef',        l:'DNV Veracity Reference Number',   t:'text'},
+    {f:'VeracitySubmitDate', l:'Date DEEP Submitted to Veracity', t:'date'},
+    // ── Status & notes ───────────────────────────────────
+    {f:'Status',             l:'Pipeline Status',                 t:'select', opts:['New','Under Triage','Submitted to DEEP','With DNV (Veracity)','TQ Issued','TQ Responded','Resubmitted to DEEP','Accepted','Accepted with Comments','Rejected','On Hold'], grp:'STATUS'},
+    {f:'Notes',              l:'Coordinator Notes',               t:'textarea', full:true},
+  ],
+  actions: [
+    {f:'ActionID',    l:'Action ID',                              t:'text',   req:true},
+    {f:'Title',       l:'Action Title',                           t:'text',   req:true, full:true},
+    {f:'Owner',       l:'Responsible Party (DNV or Bastion)',     t:'text'},
+    {f:'DueDate',     l:'Due Date',                               t:'date'},
+    {f:'Status',      l:'Status',                                 t:'select', opts:['Open','In Progress','Closed']},
+    {f:'RAGStatus',   l:'RAG Status',                             t:'select', opts:['RED','AMBER','GREEN','CLOSED']},
+    {f:'LastUpdated', l:'Last Updated',                           t:'date'},
+    {f:'Category',    l:'Category',                               t:'select', opts:['Technical','Administrative','Safety','Audit','Coordination','Reporting','Experience-Conflict']},
+    {f:'Notes',       l:'Notes',                                  t:'textarea', full:true},
+  ],
+  tqs: [
+    {f:'TQID',                 l:'TQ ID',                           t:'text',   req:true},
+    {f:'SourceDocumentNumber', l:'Bastion Source Document #',       t:'text'},
+    {f:'Subject',              l:'Query Subject',                   t:'text',   req:true, full:true},
+    {f:'OriginatingReviewer',  l:'DNV Originating Reviewer',        t:'text'},
+    {f:'ResponseOwner',        l:'Bastion Response Owner',          t:'text'},
+    {f:'DateOpened',           l:'Date Raised by DNV',              t:'date'},
+    {f:'DateResponded',        l:'Date Responded by Bastion',       t:'date'},
+    {f:'Status',               l:'Status',                          t:'select', opts:['Open','Responded','Closed']},
+    {f:'EscalationTier',       l:'Escalation Tier (P1=Critical Path)',t:'select',opts:['','P1','P2','P3','P4']},
+    {f:'TQOrigin',             l:'TQ Routing Path',                 t:'select',opts:['Direct to Bastion','Via Veracity → DEEP → Coordinator']},
+    {f:'Notes',                l:'Coordinator Notes',               t:'textarea', full:true},
+  ],
+  audits: [
+    {f:'AuditID',                    l:'Audit ID',                           t:'text',   req:true},
+    {f:'AuditName',                  l:'Audit / Assessment Name',            t:'text',   req:true, full:true},
+    {f:'AuditDate',                  l:'Scheduled Date',                     t:'date'},
+    {f:'Status',                     l:'Status',                             t:'select', opts:['Active','Upcoming','Complete']},
+    {f:'ReadinessScore',             l:'Readiness Score (0–100)',             t:'number'},
+    {f:'ReadinessStatus',            l:'Readiness Gate Status',              t:'select', opts:['Not Computed','Green','Amber','Red']},
+    {f:'RequiredEvidenceDocNumbers', l:'Required Bastion Evidence (pipe-separated)',t:'text', full:true},
+    {f:'Scope',                      l:'Audit Scope',                        t:'textarea', full:true},
+  ],
+};
+
+const TABLE_LABEL = {
+  submissions:'BASTION SUBMISSION',
+  actions:'JOINT ACTION',
+  tqs:'DNV TECHNICAL QUERY',
+  audits:'DNV AUDIT / ASSESSMENT',
+};
+
+const TABLE_SUBTITLE = {
+  submissions: 'Bastion technical submission for DNV discipline review',
+  actions:     'Joint DNV–Bastion action item',
+  tqs:         'Technical query raised by DNV reviewer · Bastion response required',
+  audits:      'DNV independent assessment · ISO audit schedule',
+};
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  const d = new Date();
+  const dateStr = d.toLocaleDateString('en-GB',{weekday:'short',year:'numeric',month:'short',day:'2-digit'});
+  document.getElementById('rail-date').textContent = dateStr.toUpperCase();
+  fetchHealth();
+  await Promise.all(['submissions','actions','tqs','audits','dnv_comments','document_register'].map(loadTable));
+  loadAttachmentCounts();   // async, non-blocking — populates file badges after table renders
+  computePriorityRail();
+});
+
+async function loadAttachmentCounts() {
+  try {
+    const counts = await (await fetch('/api/uploads/counts')).json();
+    Object.assign(ATTACH_COUNTS, counts);
+    // Re-render submissions badges now we have counts
+    renderTable('submissions');
+  } catch(e) { /* non-critical */ }
+}
+
+async function fetchHealth() {
+  try {
+    const s = await (await fetch('/api/state')).json();
+    const rag = s.program_rag || '?';
+    const el = document.getElementById('health-badge');
+    el.textContent = 'PROGRAM ' + rag;
+    el.className = 'health-badge ' + rag;
+  } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════════════════
+   PRIORITY RAIL — MORNING SYNC
+═══════════════════════════════════════════════════════ */
+function computePriorityRail() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Pending assignment: Status = 'New'
+  const newSubs = DATA.submissions.filter(r => r.Status === 'New').length;
+
+  // TQ responses overdue: Open, no DateResponded, opened > 10 days ago
+  const nowMs = Date.now();
+  const overdueMs = 10 * 24 * 60 * 60 * 1000;
+  const overdueTQs = DATA.tqs.filter(r => {
+    if (r.Status !== 'Open' || r.DateResponded) return false;
+    if (!r.DateOpened) return false;
+    return (nowMs - new Date(r.DateOpened).getTime()) > overdueMs;
+  }).length;
+
+  // Overdue actions: RAG = RED
+  const overdueActs = DATA.actions.filter(r => r.RAGStatus === 'RED').length;
+
+  // Days to next upcoming/active audit
+  const upcoming = DATA.audits
+    .filter(r => ['Active','Upcoming'].includes(r.Status) && r.AuditDate && r.AuditDate >= today)
+    .sort((a,b) => a.AuditDate.localeCompare(b.AuditDate));
+
+  let nextAuditText = 'NONE SCHEDULED';
+  if (upcoming.length) {
+    const diff = Math.ceil((new Date(upcoming[0].AuditDate) - new Date()) / (1000*60*60*24));
+    nextAuditText = diff <= 0 ? 'TODAY' : diff === 1 ? '1 DAY' : `${diff} DAYS`;
+  }
+
+  // Update counts
+  document.getElementById('rail-new-subs').textContent    = newSubs;
+  document.getElementById('rail-tq-overdue').textContent  = overdueTQs;
+  document.getElementById('rail-act-overdue').textContent = overdueActs;
+  document.getElementById('rail-next-audit').textContent  = nextAuditText;
+
+  // Colour coding
+  document.getElementById('rail-sub-chip').className  = 'rail-chip ' + (newSubs > 0 ? 'amber' : 'ok');
+  document.getElementById('rail-tq-chip').className   = 'rail-chip ' + (overdueTQs > 0 ? 'red' : 'ok');
+  document.getElementById('rail-act-chip').className  = 'rail-chip ' + (overdueActs > 0 ? 'red' : 'ok');
+
+  const nextDays = upcoming.length ? Math.ceil((new Date(upcoming[0].AuditDate)-new Date())/(1000*60*60*24)) : 999;
+  document.getElementById('rail-audit-chip').className = 'rail-chip ' + (nextDays<=7 ? 'red' : nextDays<=14 ? 'amber' : 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════════════ */
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+function switchTabByName(name) {
+  const btns = document.querySelectorAll('.tab-btn');
+  const tabs = ['submissions','actions','tqs','audits','dnv_comments','document_register'];
+  const idx = tabs.indexOf(name);
+  if (idx >= 0) switchTab(name, btns[idx]);
+}
+
+function gotoTabFilter(tableName, filterId, value) {
+  switchTabByName(tableName);
+  const el = document.getElementById(filterId);
+  if (el) { el.value = value; filterTable(tableName); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   DATA LOADING
+═══════════════════════════════════════════════════════ */
+async function loadTable(table) {
+  try {
+    const rows = await (await fetch('/api/csv/' + table)).json();
+    DATA[table] = rows;
+    document.getElementById('count-' + table).textContent = rows.length;
+    if (table === 'document_register') populateSubsystemFilter(rows);
+    renderTable(table);
+  } catch(e) {
+    document.getElementById('tbody-' + table).innerHTML =
+      `<tr class="loading-row"><td colspan="20" class="col-red">Load error: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   FILTER / SORT
+═══════════════════════════════════════════════════════ */
+function getFiltered(table) {
+  let rows = [...DATA[table]];
+  const q = (document.getElementById('filter-' + table)?.value || '').toLowerCase();
+
+  if (table === 'submissions') {
+    const s = document.getElementById('flt-sub-status')?.value;
+    const t = document.getElementById('flt-sub-type')?.value;
+    const dq = document.getElementById('flt-sub-queue')?.value;
+    if (s)  rows = rows.filter(r => r.Status === s);
+    if (t)  rows = rows.filter(r => r.DocumentType === t);
+    if (dq) rows = rows.filter(r => r.DNVDisciplineQueue === dq);
+  } else if (table === 'actions') {
+    const rag = document.getElementById('flt-act-rag')?.value;
+    const cat = document.getElementById('flt-act-cat')?.value;
+    if (rag) rows = rows.filter(r => r.RAGStatus === rag);
+    if (cat) rows = rows.filter(r => r.Category === cat);
+  } else if (table === 'tqs') {
+    const tier = document.getElementById('flt-tq-tier')?.value;
+    const s    = document.getElementById('flt-tq-status')?.value;
+    if (tier) rows = rows.filter(r => r.EscalationTier === tier);
+    if (s)    rows = rows.filter(r => r.Status === s);
+  } else if (table === 'audits') {
+    const s = document.getElementById('flt-aud-status')?.value;
+    if (s) rows = rows.filter(r => r.Status === s);
+  } else if (table === 'dnv_comments') {
+    const s  = document.getElementById('flt-dnvc-status')?.value;
+    const tp = document.getElementById('flt-dnvc-type')?.value;
+    if (s)  rows = rows.filter(r => r.Status === s);
+    if (tp) rows = rows.filter(r => r.Type === tp);
+  } else if (table === 'document_register') {
+    const sub  = document.getElementById('flt-dr-subsystem')?.value;
+    const st   = document.getElementById('flt-dr-status')?.value;
+    const comp = document.getElementById('flt-dr-complete')?.value;
+    if (sub)  rows = rows.filter(r => r.Subsystem === sub);
+    if (st)   rows = rows.filter(r => r.DNVStatus === st);
+    if (comp) rows = rows.filter(r => r.DocumentComplete === comp);
+  }
+
+  if (q) rows = rows.filter(r => Object.values(r).some(v => String(v||'').toLowerCase().includes(q)));
+
+  const ss = SORT[table];
+  if (ss) {
+    rows.sort((a,b) => {
+      const av = String(a[ss.col]||''), bv = String(b[ss.col]||'');
+      return ss.asc ? av.localeCompare(bv,undefined,{numeric:true}) : bv.localeCompare(av,undefined,{numeric:true});
+    });
+  }
+  return rows;
+}
+
+function filterTable(table) { renderTable(table); }
+
+function sortTable(table, col) {
+  const ss = SORT[table];
+  SORT[table] = { col, asc: ss?.col === col ? !ss.asc : true };
+  renderTable(table);
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER TABLES
+═══════════════════════════════════════════════════════ */
+function renderTable(table) {
+  const rows = getFiltered(table);
+  const tbody = document.getElementById('tbody-' + table);
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="20" class="empty-state">No records found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => rowHtml(table, r)).join('');
+}
+
+function rowHtml(table, r) {
+  const idx = r._idx;
+  const editBtn = `<button class="row-btn edit" onclick="openModal('${table}',${idx})" title="Edit">✎</button>`;
+  const delBtn  = `<button class="row-btn del"  onclick="confirmDelete('${table}',${idx})" title="Delete">✕</button>`;
+  const today   = new Date().toISOString().slice(0,10);
+
+  if (table === 'submissions') {
+    const st = r.Status || 'New';
+    const sc = st==='Rejected'?'red'
+             : (st==='Accepted'||st==='Accepted with Comments')?'green'
+             : (st==='TQ Issued'||st==='On Hold')?'amber'
+             : st==='New'?'blue'
+             : st==='With DNV (Veracity)'||st==='Resubmitted to DEEP'?'green'
+             : 'muted';
+
+    // File attachment badge
+    const fc = ATTACH_COUNTS[r.DocumentNumber] || 0;
+    const filesBadge = fc > 0
+      ? `<span class="attach-badge" onclick="openModalAttach('submissions',${idx})" title="${fc} file(s) attached — click to manage">📎 ${fc}</span>`
+      : `<span class="col-muted" style="font-size:10px;cursor:pointer" onclick="openModalAttach('submissions',${idx})" title="No files attached — click to attach">—</span>`;
+
+    // Pipeline chain — show tick/dash for each stage
+    const pdmOk  = r.PDMApprovalDate   ? '✓' : '–';
+    const deepOk = r.DEEPArenaRef      ? '✓' : '–';
+    const verOk  = r.VeracityRef       ? '✓' : '–';
+    const pdmCls  = r.PDMApprovalDate  ? 'col-green' : 'col-muted';
+    const deepCls = r.DEEPArenaRef     ? 'col-green' : 'col-muted';
+    const verCls  = r.VeracityRef      ? 'col-green' : 'col-muted';
+    const pipeline = `<span class="${pdmCls}" title="SolidWorks PDM approval">PDM${pdmOk}</span> <span style="color:var(--border)">›</span> <span class="${deepCls}" title="DEEP Arena ref: ${esc(r.DEEPArenaRef||'not yet submitted')}">DEEP${deepOk}</span> <span style="color:var(--border)">›</span> <span class="${verCls}" title="Veracity ref: ${esc(r.VeracityRef||'not yet submitted')}">VER${verOk}</span>`;
+
+    const deepBtn = !r.DEEPArenaRef
+      ? `<button class="row-btn" style="color:var(--amber);border-color:var(--amber)" onclick="openDeepModal(${idx})" title="Log DEEP Arena submission">→DEEP</button>`
+      : '';
+    const tqBtn = `<button class="row-btn tq" onclick="raiseTQ('${esc(r.DocumentNumber)}')" title="Raise DNV Technical Query">+TQ</button>`;
+
+    return `<tr>
+      <td><code>${esc(r.DocumentNumber)}</code>${r.PDMDocumentNumber&&r.PDMDocumentNumber!==r.DocumentNumber?`<br><span style="font-size:10px;color:var(--muted)">PDM:${esc(r.PDMDocumentNumber)}</span>`:''}</td>
+      <td class="wrap" style="min-width:160px;max-width:200px">${esc(r.DocumentTitle)}</td>
+      <td>${esc(r.Revision)}</td>
+      <td class="col-muted">${esc(r.DocumentType)}</td>
+      <td>${esc(r.SubmittingEngineer)}</td>
+      <td class="col-muted">${esc(r.SubmittedDate)}</td>
+      <td><span class="status-pill ${sc}">${esc(st)}</span></td>
+      <td class="${r.DNVDisciplineQueue?'':'col-red'}">${esc(r.DNVDisciplineQueue||'UNASSIGNED')}</td>
+      <td style="font-size:10px;white-space:nowrap">${pipeline}</td>
+      <td style="white-space:nowrap">${filesBadge}</td>
+      <td class="wrap col-muted" style="max-width:130px">${esc(r.Notes)}</td>
+      <td class="actions-col">${deepBtn}${tqBtn}${editBtn}${delBtn}</td></tr>`;
+  }
+
+  if (table === 'actions') {
+    const rag = r.RAGStatus || 'GREEN';
+    const rc  = rag==='RED'?'col-red' : rag==='AMBER'?'col-amber' : rag==='CLOSED'?'col-muted' : 'col-green';
+    const overdue = r.DueDate && r.DueDate < today && rag !== 'CLOSED';
+    return `<tr>
+      <td><code>${esc(r.ActionID)}</code></td>
+      <td class="wrap" style="min-width:160px;max-width:200px">${esc(r.Title)}</td>
+      <td>${esc(r.Owner)}</td>
+      <td class="${overdue?'col-red':''}">${esc(r.DueDate)}</td>
+      <td class="col-muted">${esc(r.Status)}</td>
+      <td class="${rc}"><span class="rag-dot ${rag}"></span>${rag}</td>
+      <td class="col-muted">${esc(r.LastUpdated)}</td>
+      <td class="col-muted">${esc(r.Category)}</td>
+      <td class="wrap col-muted" style="max-width:140px">${esc(r.Notes)}</td>
+      <td class="actions-col">${editBtn}${delBtn}</td></tr>`;
+  }
+
+  if (table === 'tqs') {
+    const tier = r.EscalationTier || '';
+    const tc   = tier==='P1'?'col-red' : tier==='P2'?'col-amber' : 'col-muted';
+    const sc   = r.Status==='Closed'?'col-muted' : r.Status==='Open'?'col-amber' : 'col-green';
+    const tierHtml = tier ? `<span class="tier-chip ${tier}">${tier}</span>` : '<span class="col-muted">—</span>';
+    const openMs   = r.DateOpened ? (Date.now() - new Date(r.DateOpened).getTime()) / (1000*60*60*24) : 0;
+    const slaClass = r.Status==='Open' && openMs > 10 ? 'col-red' : '';
+    const closeBtn = r.Status==='Open'
+      ? `<button class="row-btn close-tq" onclick="closeTQ(${idx})" title="Mark as Closed — Bastion response received">✓</button>`
+      : '';
+    return `<tr>
+      <td><code>${esc(r.TQID)}</code></td>
+      <td class="wrap" style="min-width:150px;max-width:200px">${esc(r.Subject)}</td>
+      <td class="col-muted">${esc(r.OriginatingReviewer)}</td>
+      <td><code>${esc(r.SourceDocumentNumber)}</code></td>
+      <td class="${slaClass}">${esc(r.DateOpened)}</td>
+      <td class="col-muted">${esc(r.DateResponded)}</td>
+      <td class="${sc}">${esc(r.Status)}</td>
+      <td>${esc(r.ResponseOwner)}</td>
+      <td>${tierHtml}</td>
+      <td class="wrap col-muted" style="max-width:120px">${esc(r.Notes)}</td>
+      <td class="actions-col">${closeBtn}${editBtn}${delBtn}</td></tr>`;
+  }
+
+  if (table === 'audits') {
+    const score  = parseInt(r.ReadinessScore) || 0;
+    const sc     = score>=85?'col-green' : score>=60?'col-amber' : score>0?'col-red' : 'col-muted';
+    const stCls  = r.Status==='Active'?'col-amber' : r.Status==='Complete'?'col-green' : 'col-muted';
+    const scoreBar = score > 0
+      ? `<span class="${sc}">${score}%</span>`
+      : `<span class="col-muted">—</span>`;
+    const gateCls = r.ReadinessStatus==='Green'?'col-green' : r.ReadinessStatus==='Amber'?'col-amber' : r.ReadinessStatus==='Red'?'col-red' : 'col-muted';
+    return `<tr>
+      <td><code>${esc(r.AuditID)}</code></td>
+      <td class="wrap" style="min-width:160px;max-width:200px">${esc(r.AuditName)}</td>
+      <td class="col-muted">${esc(r.AuditDate)}</td>
+      <td class="${stCls}">${esc(r.Status)}</td>
+      <td>${scoreBar}</td>
+      <td class="${gateCls}">${esc(r.ReadinessStatus)}</td>
+      <td class="wrap col-muted" style="max-width:140px">${esc(r.Scope)}</td>
+      <td class="wrap col-muted" style="max-width:150px">${esc(r.RequiredEvidenceDocNumbers)}</td>
+      <td class="actions-col">${editBtn}${delBtn}</td></tr>`;
+  }
+  if (table === 'dnv_comments') {
+    const sc = r.Status==='Open' ? 'amber' : 'muted';
+    const tc = r.Type==='Action Required' ? 'red' : 'muted';
+    return `<tr>
+      <td><code>${esc(r.CommentID)}</code></td>
+      <td><span class="status-pill ${sc}">${esc(r.Status)}</span></td>
+      <td class="col-${tc}">${esc(r.Type)}</td>
+      <td style="min-width:160px;max-width:220px">
+        <div class="dnv-rule-wrap" style="max-width:220px">
+          <span class="dnv-rule-ref" style="font-family:inherit;font-size:12px;color:var(--text);white-space:normal;border-bottom:1px dashed rgba(59,130,246,.4)">${esc(r.Title||'—')}</span>
+          ${r.Description ? `<div class="dnv-rule-tip">
+            <div class="dnv-rule-tip-ref">${esc(r.CommentID||'')} &nbsp;·&nbsp; ${esc(r.IssueDate||'')} &nbsp;·&nbsp; ${esc(r.IssuedBy||'')}</div>
+            <div class="dnv-rule-tip-title">${esc(r.Title||'')}</div>
+            <div class="dnv-rule-tip-desc">${esc((r.Description||'').replace(/_x000D_/g,'\n').slice(0,500))}${(r.Description||'').length>500?'…':''}</div>
+            ${r.ActionNeeded ? `<div class="dnv-rule-tip-action">⚑ Action: ${esc(r.ActionNeeded)}</div>` : ''}
+            ${r.DEEPInternalNotes ? `<div class="dnv-rule-tip-action" style="color:var(--muted)">DEEP: ${esc(r.DEEPInternalNotes.slice(0,120))}${r.DEEPInternalNotes.length>120?'…':''}</div>` : ''}
+          </div>` : ''}
+        </div>
+      </td>
+      <td class="wrap col-muted" style="max-width:160px">${esc(r.Discipline)}</td>
+      <td style="max-width:140px">
+        <div class="dnv-rule-wrap">
+          <span class="dnv-rule-ref">${esc(r.RuleRef||'—')}</span>
+          ${r.RuleRef ? `<div class="dnv-rule-tip">
+            <div class="dnv-rule-tip-ref">${esc(r.RuleRef)}</div>
+            <div class="dnv-rule-tip-title">${esc(r.Title||'')}</div>
+            <div class="dnv-rule-tip-desc">${esc((r.Description||'').slice(0,200))}${(r.Description||'').length>200?'…':''}</div>
+            ${r.ActionNeeded ? `<div class="dnv-rule-tip-action">⚑ ${esc(r.ActionNeeded.slice(0,120))}${r.ActionNeeded.length>120?'…':''}</div>` : ''}
+          </div>` : ''}
+        </div>
+      </td>
+      <td class="col-muted">${esc(r.IssueDate)}</td>
+      <td>${esc(r.IssuedBy)}</td>
+      <td class="${r.ActionNeededBy?'':'col-muted'}">${esc(r.ActionNeededBy||'—')}</td>
+      <td><code style="font-size:10px">${esc(r.LinkedDocuments)}</code></td></tr>`;
+  }
+
+  if (table === 'document_register') {
+    const compCls = r.DocumentComplete==='Yes' ? 'col-green' : r.DocumentComplete==='No' ? 'col-red' : 'col-muted';
+    const subCls  = r.DNVSubmitted==='Yes' ? 'col-green' : 'col-muted';
+    const stCls   = r.DNVStatus==='Approved'?'col-green' : r.DNVStatus==='Action Required'?'col-red' : r.DNVStatus==='For Approval'?'col-amber' : 'col-muted';
+    const openN   = parseInt(r.OpenComments) || 0;
+    const uniqN   = parseInt(r.OpenUniqueComments) || 0;
+    return `<tr>
+      <td class="col-muted">${esc(r.Subsystem)}</td>
+      <td><code style="font-size:10px">${esc(r.VendorDocNumber)}</code></td>
+      <td class="wrap" style="min-width:160px;max-width:220px">${esc(r.Description)}</td>
+      <td>${esc(r.Owner)}</td>
+      <td class="col-muted">${esc(r.Version)}</td>
+      <td class="${stCls}">${esc(r.DNVStatus)}</td>
+      <td class="${compCls}">${esc(r.DocumentComplete)}</td>
+      <td class="${subCls}">${esc(r.DNVSubmitted)}</td>
+      <td class="${openN>0?'col-amber':''}">${openN > 0 ? openN : '—'}</td>
+      <td class="${uniqN>0?'col-amber':''}">${uniqN > 0 ? uniqN : '—'}</td></tr>`;
+  }
+
+  return '';
+}
+
+/* ═══════════════════════════════════════════════════════
+   WORKFLOW SHORTCUTS
+═══════════════════════════════════════════════════════ */
+
+// Pre-fill a new TQ from a submission row
+function raiseTQ(docNumber) {
+  switchTabByName('tqs');
+  const today = new Date().toISOString().slice(0,10);
+  const tqCount = DATA.tqs.length + 1;
+  const autoId  = `TQ-${String(tqCount).padStart(3,'0')}`;
+  openModal('tqs', null, {
+    TQID: autoId,
+    SourceDocumentNumber: docNumber,
+    DateOpened: today,
+    Status: 'Open',
+    EscalationTier: 'P4',
+  });
+}
+
+// Quick-close a TQ (mark Closed, set DateResponded = today)
+async function closeTQ(idx) {
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const res = await fetch(`/api/csv/tqs/${idx}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ Status:'Closed', DateResponded: today }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Server error');
+    showToast('TQ closed — response date set to today', 'ok');
+    await loadTable('tqs');
+    computePriorityRail();
+    fetchHealth();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   DEEP ARENA MODAL
+═══════════════════════════════════════════════════════ */
+function openDeepModal(idx) {
+  const row = DATA.submissions.find(r => r._idx === idx);
+  if (!row) return;
+  // Reuse the main modal with pre-focused DEEP fields
+  openModal('submissions', idx, {});
+  // Scroll the modal to the DEEP section after render
+  setTimeout(() => {
+    const deepField = document.querySelector('[data-field="DEEPArenaRef"]');
+    if (deepField) deepField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PDM IMPORT (Option A — CSV from SolidWorks PDM export)
+═══════════════════════════════════════════════════════ */
+function triggerPDMImport() {
+  document.getElementById('pdm-file-input').value = '';
+  document.getElementById('pdm-file-input').click();
+}
+
+async function runPDMImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  showToast('Importing PDM export…', 'ok');
+  try {
+    const res = await fetch('/api/import/pdm', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) { showToast('Import error: ' + (data.error || 'unknown'), 'error'); return; }
+    await loadTable('submissions');
+    computePriorityRail();
+    showToast(`PDM import: ${data.added_count} added, ${data.skipped_count} already exist`, 'ok');
+  } catch(e) {
+    showToast('Import failed: ' + e.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL — OPEN
+═══════════════════════════════════════════════════════ */
+function openModal(table, idx, prefill = {}) {
+  modalCtx = { table, idx };
+  const isNew = idx === null;
+
+  document.getElementById('modal-title').textContent =
+    (isNew ? 'LOG NEW ' : 'EDIT ') + TABLE_LABEL[table];
+  document.getElementById('modal-subtitle').textContent = TABLE_SUBTITLE[table];
+
+  const rowData = isNew ? prefill : (DATA[table].find(r => r._idx === idx) || {});
+  const defs = FORM_DEFS[table];
+
+  document.getElementById('modal-form').innerHTML = defs.map(d => {
+    // Section group header
+    const grpHeader = d.grp
+      ? `<div class="form-section-header full">${esc(d.grp)}</div>`
+      : '';
+    const val = String(rowData[d.f] ?? '');
+    const reqStar = d.req ? `<span class="req">*</span>` : '';
+    const cls = d.full ? 'form-group full' : 'form-group';
+    let input;
+
+    if (d.t === 'select') {
+      input = `<select class="form-control" id="f-${d.f}" data-field="${d.f}">
+        ${(d.opts||[]).map(o => `<option${val===o?' selected':''}>${esc(o)}</option>`).join('')}
+      </select>`;
+    } else if (d.t === 'textarea') {
+      input = `<textarea class="form-control" id="f-${d.f}" data-field="${d.f}" rows="3">${esc(val)}</textarea>`;
+    } else {
+      input = `<input class="form-control" type="${d.t}" id="f-${d.f}" data-field="${d.f}" value="${esc(val)}">`;
+    }
+
+    return grpHeader + `<div class="${cls}">
+      <label class="form-label">${esc(d.l)}${reqStar}</label>
+      ${input}
+    </div>`;
+  }).join('');
+
+  document.getElementById('modal-delete-btn').style.display = isNew ? 'none' : 'inline-flex';
+
+  // Remove any leftover attachment section from a previous modal open
+  document.getElementById('attach-section')?.remove();
+  window._attachDocNum = null;
+
+  // Attachment section — submissions only, existing records only
+  if (table === 'submissions' && !isNew) {
+    const docNum = rowData.DocumentNumber || '';
+    window._attachDocNum = docNum;
+    const sec = document.createElement('div');
+    sec.id = 'attach-section';
+    sec.className = 'attach-section';
+    sec.innerHTML = `
+      <div class="form-section-header" style="margin-top:0">
+        ATTACHED FILES · PDF / SOLIDWORKS / STEP / DXF
+      </div>
+      <div class="attach-dropzone" id="attach-dropzone"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleAttachDrop(event)">
+        <input type="file" class="attach-file-input" multiple
+               accept=".pdf,.slddrw,.sldprt,.sldasm,.step,.stp,.igs,.iges,.dxf,.dwg,.xlsx,.docx,.txt,.csv"
+               onchange="handleAttachInput(this)">
+        ⬆ DRAG &amp; DROP or CLICK — PDF · SLDDRW · SLDPRT/ASM · STEP · DXF · XLSX
+      </div>
+      <div class="attach-list" id="attach-list">
+        <div style="font-size:11px;color:var(--muted);padding:4px 0;font-family:var(--font-head)">Loading…</div>
+      </div>`;
+    document.getElementById('modal-body').appendChild(sec);
+    loadAttachments(docNum);
+  } else if (table === 'submissions' && isNew) {
+    // New record — can't attach before the record exists
+    const note = document.createElement('div');
+    note.className = 'attach-section';
+    note.innerHTML = `<div style="font-family:var(--font-head);font-size:11px;color:var(--muted);letter-spacing:.06em;padding:6px 0;border-top:1px solid var(--border);margin-top:14px">
+      ⓘ Save this record first, then re-open to attach PDF / SolidWorks files.
+    </div>`;
+    document.getElementById('modal-body').appendChild(note);
+  }
+
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(() => document.getElementById('modal-form').querySelector('input,select,textarea')?.focus(), 60);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  document.getElementById('attach-section')?.remove();
+  window._attachDocNum = null;
+  modalCtx = null;
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+});
+
+/* ═══════════════════════════════════════════════════════
+   MODAL — SAVE
+═══════════════════════════════════════════════════════ */
+async function modalSave() {
+  if (!modalCtx) return;
+  const { table, idx } = modalCtx;
+  const isNew = idx === null;
+  const defs  = FORM_DEFS[table];
+  const payload = {};
+  let valid = true;
+
+  for (const d of defs) {
+    const el = document.getElementById('f-' + d.f);
+    if (!el) continue;
+    const val = el.value.trim();
+    if (d.req && !val) { el.classList.add('error'); valid = false; }
+    else { el.classList.remove('error'); payload[d.f] = val; }
+  }
+
+  if (!valid) { showToast('Fill in required fields', 'error'); return; }
+
+  const saveBtn = document.getElementById('modal-save-btn');
+  const spin    = document.getElementById('save-spinner');
+  saveBtn.disabled = true;
+  spin.style.display = 'block';
+
+  try {
+    const url    = isNew ? `/api/csv/${table}` : `/api/csv/${table}/${idx}`;
+    const method = isNew ? 'POST' : 'PUT';
+    const res    = await fetch(url, {
+      method,
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Server error');
+    showToast(isNew ? 'Record logged' : 'Record updated', 'ok');
+    closeModal();
+    await loadTable(table);
+    computePriorityRail();
+    fetchHealth();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    spin.style.display = 'none';
+  }
+}
+
+async function modalDelete() {
+  if (!modalCtx) return;
+  confirmDelete(modalCtx.table, modalCtx.idx);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DELETE
+═══════════════════════════════════════════════════════ */
+function confirmDelete(table, idx) {
+  pendingDelete = { table, idx };
+  const row = DATA[table].find(r => r._idx === idx);
+  const idFields = {submissions:'DocumentNumber',actions:'ActionID',tqs:'TQID',audits:'AuditID'};
+  const id = row?.[idFields[table]] || 'this record';
+  document.getElementById('confirm-msg').textContent = `Delete "${id}"? This cannot be undone.`;
+  document.getElementById('confirm-yes').onclick = executeDelete;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+  pendingDelete = null;
+}
+
+async function executeDelete() {
+  if (!pendingDelete) return;
+  const { table, idx } = pendingDelete;
+  closeConfirm();
+  closeModal();
+  try {
+    const res  = await fetch(`/api/csv/${table}/${idx}`, { method:'DELETE' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Server error');
+    showToast('Record deleted', 'ok');
+    await loadTable(table);
+    computePriorityRail();
+    fetchHealth();
+  } catch(e) {
+    showToast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PIPELINE RUN
+═══════════════════════════════════════════════════════ */
+async function runPipeline() {
+  const btn  = document.getElementById('run-btn');
+  const spin = document.getElementById('run-spinner');
+  btn.disabled = true;
+  spin.style.display = 'block';
+  setStatus('Running verification pipeline…');
+  showToast('Running pipeline…', 'info');
+
+  try {
+    const res  = await fetch('/api/run', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({mode:'daily'}),
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showToast('Pipeline complete — ' + (data.state?.program_rag || ''), 'ok');
+      fetchHealth();
+      setStatus('Pipeline complete · ' + new Date().toLocaleTimeString());
+    } else {
+      showToast('Pipeline error: ' + data.message, 'error');
+      setStatus('Pipeline error — check session log');
+    }
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    setStatus('Error');
+  } finally {
+    btn.disabled = false;
+    spin.style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ATTACHMENT MANAGEMENT
+═══════════════════════════════════════════════════════ */
+
+// Open modal and scroll to attachment zone (called from FILES cell click)
+function openModalAttach(table, idx) {
+  openModal(table, idx);
+  setTimeout(() => {
+    document.getElementById('attach-section')?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }, 180);
+}
+
+// Load and render the file list for the current modal
+async function loadAttachments(docNum) {
+  const list = document.getElementById('attach-list');
+  if (!list) return;
+  try {
+    const files = await (await fetch('/api/uploads/' + encodeURIComponent(docNum))).json();
+    if (!files.length) {
+      list.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:5px 0;font-family:var(--font-head);letter-spacing:.06em">No files attached yet</div>`;
+    } else {
+      list.innerHTML = files.map(f => `
+        <div class="attach-item">
+          <a href="/api/uploads/${encodeURIComponent(docNum)}/${encodeURIComponent(f.name)}"
+             download="${esc(f.name)}" target="_blank">${esc(f.name)}</a>
+          <span class="attach-size">${formatFileSize(f.size)}</span>
+          <button class="attach-del" onclick="deleteAttachment('${esc(f.name)}')" title="Remove">✕</button>
+        </div>`).join('');
+    }
+    // Update global count and re-render badge in table
+    ATTACH_COUNTS[docNum] = files.length;
+    renderTable('submissions');
+  } catch(e) {
+    if (list) list.innerHTML = `<div style="color:var(--red);font-size:11px;padding:4px 0">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+// Triggered by file input change
+async function handleAttachInput(input) {
+  const docNum = window._attachDocNum;
+  if (!docNum) return;
+  for (const file of Array.from(input.files)) await uploadAttachment(docNum, file);
+  input.value = '';
+}
+
+// Triggered by drop
+function handleAttachDrop(event) {
+  event.preventDefault();
+  document.getElementById('attach-dropzone')?.classList.remove('dragover');
+  const docNum = window._attachDocNum;
+  if (!docNum) return;
+  const files = event.dataTransfer?.files;
+  if (files) Array.from(files).forEach(f => uploadAttachment(docNum, f));
+}
+
+// Upload one file
+async function uploadAttachment(docNum, file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  showToast(`Uploading ${file.name}…`, 'info');
+  try {
+    const res  = await fetch('/api/uploads/' + encodeURIComponent(docNum), { method:'POST', body:fd });
+    const data = await res.json();
+    if (!res.ok || data.error) { showToast('Upload error: ' + (data.error||'unknown'), 'error'); return; }
+    showToast(`${file.name} attached`, 'ok');
+    loadAttachments(docNum);
+  } catch(e) {
+    showToast('Upload failed: ' + e.message, 'error');
+  }
+}
+
+// Delete one file
+async function deleteAttachment(filename) {
+  const docNum = window._attachDocNum;
+  if (!docNum) return;
+  try {
+    await fetch('/api/uploads/' + encodeURIComponent(docNum) + '/' + encodeURIComponent(filename), { method:'DELETE' });
+    showToast(filename + ' removed', 'ok');
+    loadAttachments(docNum);
+  } catch(e) {
+    showToast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+// Human-readable file size
+function formatFileSize(bytes) {
+  if (bytes < 1024)       return bytes + ' B';
+  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+/* ═══════════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════════ */
+function populateSubsystemFilter(rows) {
+  const sel = document.getElementById('flt-dr-subsystem');
+  if (!sel) return;
+  const vals = [...new Set(rows.map(r => r.Subsystem).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Subsystems</option>' +
+    vals.map(v => `<option${cur===v?' selected':''}>${esc(v)}</option>`).join('');
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Position fixed tooltips near the cursor ───────────────────────────────
+document.addEventListener('mousemove', e => {
+  document.querySelectorAll('.dnv-rule-tip').forEach(tip => {
+    if (tip.style.display !== 'none' && tip.offsetParent !== null) {
+      const pad = 16;
+      const tw  = tip.offsetWidth  || 520;
+      const th  = tip.offsetHeight || 200;
+      let x = e.clientX + pad;
+      let y = e.clientY + pad;
+      if (x + tw > window.innerWidth  - pad) x = e.clientX - tw - pad;
+      if (y + th > window.innerHeight - pad) y = e.clientY - th - pad;
+      tip.style.left = x + 'px';
+      tip.style.top  = y + 'px';
+    }
+  });
+});
+function setStatus(msg) { document.getElementById('sb-status').textContent = msg; }
+function showToast(msg, type='info') {
+  const c  = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   NEW DNV COMMENT MODAL
+═══════════════════════════════════════════════════════ */
+function openNewCommentModal() {
+  // Reset form
+  document.getElementById('nc-title').value       = '';
+  document.getElementById('nc-desc').value        = '';
+  document.getElementById('nc-type').value        = 'Action Required';
+  document.getElementById('nc-status').value      = 'Open';
+  document.getElementById('nc-discipline').value  = '';
+  document.getElementById('nc-ruleref').value     = '';
+  document.getElementById('nc-issuedby').value    = (window.getIdentity ? window.getIdentity().name : '') || '';
+  document.getElementById('nc-issuedate').value   = new Date().toISOString().slice(0,10);
+  document.getElementById('nc-actionby').value    = '';
+  document.getElementById('nc-action').value      = '';
+  document.getElementById('nc-linkeddoc').value   = '';
+  document.getElementById('nc-linkedtitle').value = '';
+  document.getElementById('nc-internal').value    = '';
+  document.getElementById('nc-responsible').value = '';
+  document.getElementById('nc-id-display').textContent = 'BC-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-###';
+  document.getElementById('nc-err').style.display = 'none';
+  document.getElementById('nc-overlay').style.display = 'flex';
+  document.getElementById('nc-title').focus();
+}
+
+function closeNewCommentModal() {
+  document.getElementById('nc-overlay').style.display = 'none';
+}
+
+async function submitNewComment() {
+  const title = document.getElementById('nc-title').value.trim();
+  const desc  = document.getElementById('nc-desc').value.trim();
+  const errEl = document.getElementById('nc-err');
+  errEl.style.display = 'none';
+
+  if (!title) {
+    errEl.textContent = 'Title is required.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const payload = {
+    Status:           document.getElementById('nc-status').value,
+    Type:             document.getElementById('nc-type').value,
+    Title:            title,
+    Description:      desc,
+    Discipline:       document.getElementById('nc-discipline').value.trim(),
+    RuleRef:          document.getElementById('nc-ruleref').value.trim(),
+    IssueDate:        document.getElementById('nc-issuedate').value,
+    IssuedBy:         document.getElementById('nc-issuedby').value.trim(),
+    ActionNeededBy:   document.getElementById('nc-actionby').value,
+    ActionNeeded:     document.getElementById('nc-action').value.trim(),
+    LinkedDocuments:  document.getElementById('nc-linkeddoc').value.trim(),
+    LinkedDocTitles:  document.getElementById('nc-linkedtitle').value.trim(),
+    DEEPInternalNotes: document.getElementById('nc-internal').value.trim(),
+    ResponsibleParty:  document.getElementById('nc-responsible').value.trim(),
+  };
+
+  try {
+    const res  = await fetch('/api/dnv-comments/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Server error.';
+      errEl.style.display = 'block';
+      return;
+    }
+    showToast('Comment ' + data.comment_id + ' created', 'ok');
+    closeNewCommentModal();
+    // Reload the dnv_comments table so new row appears immediately
+    await loadTable('dnv_comments');
+    renderTable('dnv_comments');
+  } catch(e) {
+    errEl.textContent = 'Network error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+document.getElementById('nc-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeNewCommentModal();
+});
+</script>
+
+<!-- ── NEW COMMENT MODAL ── -->
+<div id="nc-overlay" style="
+  display:none;position:fixed;inset:0;z-index:8500;background:rgba(7,10,20,.88);
+  align-items:center;justify-content:center;backdrop-filter:blur(3px)">
+  <div style="background:#111827;border:1px solid #1E2D45;border-radius:8px;
+              padding:28px 32px;width:580px;max-height:90vh;overflow-y:auto;
+              box-shadow:0 16px 48px rgba(0,0,0,.6)">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;
+                letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">
+      NEW DNV COMMENT
+    </div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6B7280;
+                margin-bottom:20px">
+      COMMENT ID (system-generated): <span id="nc-id-display" style="color:#60A5FA"></span>
+    </div>
+
+    <!-- Row: Type + Status -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Type</div>
+        <select id="nc-type" style="width:100%;background:#1A2234;border:1px solid #1E2D45;
+          color:#E8ECF0;font-family:'IBM Plex Mono',monospace;font-size:12px;
+          padding:7px 10px;border-radius:4px;outline:none">
+          <option>Action Required</option>
+          <option>For Information</option>
+          <option>For Approval</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Status</div>
+        <select id="nc-status" style="width:100%;background:#1A2234;border:1px solid #1E2D45;
+          color:#E8ECF0;font-family:'IBM Plex Mono',monospace;font-size:12px;
+          padding:7px 10px;border-radius:4px;outline:none">
+          <option>Open</option>
+          <option>Closed</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Title *</div>
+      <input id="nc-title" type="text" placeholder="Short comment title"
+        style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+               font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+               border-radius:4px;outline:none">
+    </div>
+
+    <!-- Description -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Description</div>
+      <textarea id="nc-desc" rows="4" placeholder="Full comment text…"
+        style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+               font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+               border-radius:4px;outline:none;resize:vertical"></textarea>
+    </div>
+
+    <!-- Row: Discipline + RuleRef -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Discipline</div>
+        <input id="nc-discipline" type="text" placeholder="e.g. E - Electrical"
+          style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Rule Reference</div>
+        <input id="nc-ruleref" type="text" placeholder="e.g. DNV-RU-UWT Pt.5 Ch.10"
+          style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+    </div>
+
+    <!-- Row: IssuedBy + IssueDate -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Issued By</div>
+        <input id="nc-issuedby" type="text" placeholder="DNV reviewer name"
+          style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Issue Date</div>
+        <input id="nc-issuedate" type="date"
+          style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+    </div>
+
+    <!-- Row: ActionNeeded + ActionNeededBy -->
+    <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Action Needed</div>
+        <input id="nc-action" type="text" placeholder="Action description for Bastion"
+          style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Action By</div>
+        <input id="nc-actionby" type="date"
+          style="width:160px;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+    </div>
+
+    <!-- Linked Documents -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Linked Document #</div>
+        <input id="nc-linkeddoc" type="text" placeholder="e.g. BT3345_9001_009"
+          style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Linked Document Title</div>
+        <input id="nc-linkedtitle" type="text" placeholder="Document title"
+          style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                 font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                 border-radius:4px;outline:none">
+      </div>
+    </div>
+
+    <!-- Internal fields (Bastion only) -->
+    <div style="border-top:1px solid #1E2D45;margin-bottom:14px;padding-top:14px">
+      <div style="font-size:10px;color:#F59E0B;letter-spacing:.08em;text-transform:uppercase;
+                  margin-bottom:10px">&#9888; INTERNAL — NOT SHARED WITH DNV</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Internal Notes</div>
+          <textarea id="nc-internal" rows="2" placeholder="Internal Bastion notes…"
+            style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                   font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                   border-radius:4px;outline:none;resize:none"></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#6B7280;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Responsible Party</div>
+          <input id="nc-responsible" type="text" placeholder="Internal owner"
+            style="width:100%;background:#1A2234;border:1px solid #1E2D45;color:#E8ECF0;
+                   font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 10px;
+                   border-radius:4px;outline:none">
+        </div>
+      </div>
+    </div>
+
+    <div id="nc-err" style="font-size:11px;color:#EF4444;margin-bottom:10px;display:none"></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeNewCommentModal()"
+        style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+               letter-spacing:.09em;padding:8px 20px;border-radius:4px;cursor:pointer;
+               border:1px solid #1E2D45;background:transparent;color:#6B7280">CANCEL</button>
+      <button onclick="submitNewComment()"
+        style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+               letter-spacing:.09em;padding:8px 20px;border-radius:4px;cursor:pointer;
+               border:none;background:#22C55E;color:#fff">SAVE COMMENT ›</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+</body>
+</html>

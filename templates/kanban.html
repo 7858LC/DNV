@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNV–Bastion Kanban Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --surface3: #222e42;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #3B82F6;
+  --dnv-blue: #003591;
+  --closed:   #374151;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+#shell {
+  display: grid;
+  grid-template-rows: 48px 44px 1fr 32px;
+  height: 100vh;
+}
+
+/* ── TOP BAR ─────────────────────────────────────────── */
+#topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+.brand {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text);
+  text-decoration: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.brand span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0;
+  font-family: var(--font-data);
+}
+.nav-links {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.nav-btn {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-btn:hover { color: var(--text); border-color: var(--blue); }
+.nav-btn.active { color: var(--blue); border-color: var(--blue); background: rgba(59,130,246,0.08); }
+
+/* ── BOARD SWITCHER ──────────────────────────────────── */
+#boardbar {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 4px;
+}
+.board-tab {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.board-tab:hover { color: var(--text); }
+.board-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.board-count {
+  font-family: var(--font-data);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: var(--surface3);
+  color: var(--muted);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.refresh-btn {
+  margin-left: auto;
+  font-family: var(--font-data);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.refresh-btn:hover { color: var(--text); }
+
+/* ── KANBAN AREA ─────────────────────────────────────── */
+#kanban-area {
+  overflow: hidden;
+  position: relative;
+}
+.board {
+  display: none;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 16px 16px;
+  gap: 12px;
+  align-items: flex-start;
+}
+.board.active {
+  display: flex;
+}
+
+/* ── COLUMNS ─────────────────────────────────────────── */
+.col {
+  flex: 0 0 280px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
+}
+.col-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.col-label {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.col-badge {
+  font-family: var(--font-data);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--surface3);
+  color: var(--muted);
+  margin-left: auto;
+}
+.col-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-blue   { background: var(--blue); }
+.dot-amber  { background: var(--amber); }
+.dot-green  { background: var(--green); }
+.dot-muted  { background: var(--muted); }
+.dot-red    { background: var(--red); }
+
+.col-cards {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  flex: 1;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.col-cards::-webkit-scrollbar { width: 4px; }
+.col-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* drop target highlight */
+.col-cards.drag-over {
+  background: rgba(59,130,246,0.06);
+  border-radius: 4px;
+}
+
+/* ── CARDS ───────────────────────────────────────────── */
+.card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 9px 10px 8px;
+  cursor: grab;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+.card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.2);
+}
+.card.dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+.card-id {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.card-title {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pill {
+  font-family: var(--font-data);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.pill-tier-p1 { background: rgba(239,68,68,0.18); color: #991B1B; border: 1px solid rgba(239,68,68,0.3); }
+.pill-tier-p2 { background: rgba(245,158,11,0.18); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
+.pill-tier-p3 { background: rgba(59,130,246,0.15); color: #93C5FD; border: 1px solid rgba(59,130,246,0.25); }
+.pill-tier-p4 { background: var(--surface3); color: var(--muted); border: 1px solid var(--border); }
+.pill-rag-red    { background: rgba(239,68,68,0.18); color: #991B1B; border: 1px solid rgba(239,68,68,0.3); }
+.pill-rag-amber  { background: rgba(245,158,11,0.18); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
+.pill-rag-green  { background: rgba(34,197,94,0.15); color: #86EFAC; border: 1px solid rgba(34,197,94,0.25); }
+.pill-neutral  { background: var(--surface3); color: var(--muted); border: 1px solid var(--border); }
+.pill-disc { background: rgba(59,130,246,0.12); color: #93C5FD; border: 1px solid rgba(59,130,246,0.2); }
+
+.card-footer {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-owner {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--muted);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-due {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--muted);
+}
+.card-due.overdue { color: var(--red); }
+.card-due.soon    { color: var(--amber); }
+
+/* ── EMPTY COLUMN STATE ──────────────────────────────── */
+.col-empty {
+  text-align: center;
+  padding: 20px 12px;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: var(--font-data);
+}
+
+/* ── TOAST ───────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 999;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── STATUS BAR ──────────────────────────────────────── */
+#statusbar {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.sb-sep { color: var(--border); }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a class="brand" href="/">DNV–BASTION INTERFACE <span>Assurance Interface Management · Bastion Technologies Account</span></a>
+  <div class="nav-links">
+    <a href="/" class="nav-btn">DASHBOARD</a>
+    <a href="/coordinator" class="nav-btn">COORDINATOR</a>
+    <a href="/kanban" class="nav-btn active">KANBAN</a>
+    <a href="/reports" class="nav-btn">REPORTS</a>
+  </div>
+</div>
+
+<!-- BOARD SWITCHER -->
+<div id="boardbar">
+  <button class="board-tab active" onclick="switchBoard('tqs')">DNV TECHNICAL QUERIES <span class="board-count" id="cnt-tqs">0</span></button>
+  <button class="board-tab" onclick="switchBoard('actions')">JOINT ACTIONS <span class="board-count" id="cnt-actions">0</span></button>
+  <button class="board-tab" onclick="switchBoard('submissions')">BASTION SUBMISSIONS <span class="board-count" id="cnt-submissions">0</span></button>
+  <button class="refresh-btn" onclick="loadAll()">↺ REFRESH</button>
+</div>
+
+<!-- KANBAN AREA -->
+<div id="kanban-area">
+
+  <!-- TQ BOARD: Open | Responded | Closed -->
+  <div class="board active" id="board-tqs">
+    <div class="col" data-board="tqs" data-status="Open">
+      <div class="col-header">
+        <div class="col-dot dot-amber"></div>
+        <span class="col-label">Open</span>
+        <span class="col-badge" id="tqs-Open-cnt">0</span>
+      </div>
+      <div class="col-cards" id="tqs-Open" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'tqs','Open')"></div>
+    </div>
+    <div class="col" data-board="tqs" data-status="Responded">
+      <div class="col-header">
+        <div class="col-dot dot-blue"></div>
+        <span class="col-label">Responded</span>
+        <span class="col-badge" id="tqs-Responded-cnt">0</span>
+      </div>
+      <div class="col-cards" id="tqs-Responded" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'tqs','Responded')"></div>
+    </div>
+    <div class="col" data-board="tqs" data-status="Closed">
+      <div class="col-header">
+        <div class="col-dot dot-muted"></div>
+        <span class="col-label">Closed</span>
+        <span class="col-badge" id="tqs-Closed-cnt">0</span>
+      </div>
+      <div class="col-cards" id="tqs-Closed" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'tqs','Closed')"></div>
+    </div>
+  </div>
+
+  <!-- ACTIONS BOARD: Open | In Progress | Complete | Closed -->
+  <div class="board" id="board-actions">
+    <div class="col" data-board="actions" data-status="Open">
+      <div class="col-header">
+        <div class="col-dot dot-blue"></div>
+        <span class="col-label">Open</span>
+        <span class="col-badge" id="actions-Open-cnt">0</span>
+      </div>
+      <div class="col-cards" id="actions-Open" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'actions','Open')"></div>
+    </div>
+    <div class="col" data-board="actions" data-status="In Progress">
+      <div class="col-header">
+        <div class="col-dot dot-amber"></div>
+        <span class="col-label">In Progress</span>
+        <span class="col-badge" id="actions-InProgress-cnt">0</span>
+      </div>
+      <div class="col-cards" id="actions-In Progress" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'actions','In Progress')"></div>
+    </div>
+    <div class="col" data-board="actions" data-status="Complete">
+      <div class="col-header">
+        <div class="col-dot dot-green"></div>
+        <span class="col-label">Complete</span>
+        <span class="col-badge" id="actions-Complete-cnt">0</span>
+      </div>
+      <div class="col-cards" id="actions-Complete" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'actions','Complete')"></div>
+    </div>
+    <div class="col" data-board="actions" data-status="Closed">
+      <div class="col-header">
+        <div class="col-dot dot-muted"></div>
+        <span class="col-label">Closed</span>
+        <span class="col-badge" id="actions-Closed-cnt">0</span>
+      </div>
+      <div class="col-cards" id="actions-Closed" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'actions','Closed')"></div>
+    </div>
+  </div>
+
+  <!-- SUBMISSIONS BOARD: New | Under Triage | Submitted to DEEP | With DNV (Veracity) | TQ Issued | Accepted | Rejected -->
+  <div class="board" id="board-submissions">
+    <div class="col" data-board="submissions" data-status="New">
+      <div class="col-header"><div class="col-dot dot-blue"></div><span class="col-label">New</span><span class="col-badge" id="submissions-New-cnt">0</span></div>
+      <div class="col-cards" id="submissions-New" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'submissions','New')"></div>
+    </div>
+    <div class="col" data-board="submissions" data-status="Under Triage">
+      <div class="col-header"><div class="col-dot dot-amber"></div><span class="col-label">Under Triage</span><span class="col-badge" id="submissions-UnderTriage-cnt">0</span></div>
+      <div class="col-cards" id="submissions-Under Triage" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'submissions','Under Triage')"></div>
+    </div>
+    <div class="col" data-board="submissions" data-status="Submitted to DEEP">
+      <div class="col-header"><div class="col-dot" style="background:#A78BFA"></div><span class="col-label">Submitted to DEEP</span><span class="col-badge" id="submissions-SubmittedtoDEEP-cnt">0</span></div>
+      <div class="col-cards" id="submissions-Submitted to DEEP" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'submissions','Submitted to DEEP')"></div>
+    </div>
+    <div class="col" data-board="submissions" data-status="With DNV (Veracity)">
+      <div class="col-header"><div class="col-dot" style="background:#38BDF8"></div><span class="col-label">With DNV (Veracity)</span><span class="col-badge" id="submissions-WithDNVVeracity-cnt">0</span></div>
+      <div class="col-cards" id="submissions-With DNV (Veracity)" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'submissions','With DNV (Veracity)')"></div>
+    </div>
+    <div class="col" data-board="submissions" data-status="TQ Issued">
+      <div class="col-header"><div class="col-dot dot-amber"></div><span class="col-label">TQ Issued</span><span class="col-badge" id="submissions-TQIssued-cnt">0</span></div>
+      <div class="col-cards" id="submissions-TQ Issued" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'submissions','TQ Issued')"></div>
+    </div>
+    <div class="col" data-board="submissions" data-status="Accepted">
+      <div class="col-header"><div class="col-dot dot-green"></div><span class="col-label">Accepted</span><span class="col-badge" id="submissions-Accepted-cnt">0</span></div>
+      <div class="col-cards" id="submissions-Accepted" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'submissions','Accepted')"></div>
+    </div>
+    <div class="col" data-board="submissions" data-status="Rejected">
+      <div class="col-header"><div class="col-dot dot-red"></div><span class="col-label">Rejected</span><span class="col-badge" id="submissions-Rejected-cnt">0</span></div>
+      <div class="col-cards" id="submissions-Rejected" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'submissions','Rejected')"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span id="sb-board">TQ BOARD</span>
+  <span class="sb-sep">|</span>
+  <span id="sb-total">–</span>
+  <span class="sb-sep">|</span>
+  <span>Drag cards to update status</span>
+  <span class="sb-sep" style="margin-left:auto">|</span>
+  <span id="sb-time">–</span>
+</div>
+
+</div><!-- #shell -->
+
+<div id="toast"></div>
+
+<script>
+const TODAY = new Date();
+TODAY.setHours(0,0,0,0);
+
+const BOARDS = {
+  tqs:         { label:'TQ BOARD',         cols:['Open','Responded','Closed'],               statusField:'Status' },
+  actions:     { label:'ACTIONS BOARD',    cols:['Open','In Progress','Complete','Closed'],   statusField:'Status' },
+  submissions: { label:'SUBMISSIONS BOARD',cols:['New','Under Triage','Submitted to DEEP','With DNV (Veracity)','TQ Issued','Accepted','Rejected'], statusField:'Status' },
+};
+
+let DATA = { tqs:[], actions:[], submissions:[] };
+let currentBoard = 'tqs';
+let dragItem = null; // { table, idx, oldStatus }
+
+// ── LOAD ────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([
+    fetch('/api/csv/tqs').then(r=>r.json()).then(d=>{ DATA.tqs=d; }),
+    fetch('/api/csv/actions').then(r=>r.json()).then(d=>{ DATA.actions=d; }),
+    fetch('/api/csv/submissions').then(r=>r.json()).then(d=>{ DATA.submissions=d; }),
+  ]);
+  renderAllBoards();
+  document.getElementById('sb-time').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function renderAllBoards() {
+  renderBoard('tqs');
+  renderBoard('actions');
+  renderBoard('submissions');
+  updateBoardCounts();
+  updateStatusBar();
+}
+
+function renderBoard(table) {
+  const cfg = BOARDS[table];
+  cfg.cols.forEach(status => {
+    const colId = table + '-' + status;
+    const el = document.getElementById(colId);
+    if (!el) return;
+    const items = DATA[table].filter(r => r[cfg.statusField] === status);
+    el.innerHTML = '';
+    if (items.length === 0) {
+      el.innerHTML = '<div class="col-empty">No items</div>';
+    } else {
+      items.forEach(row => el.appendChild(buildCard(table, row)));
+    }
+    // update col badge
+    const cntKey = table + '-' + status.replace(/[\s()]/g,'') + '-cnt';
+    const cntEl = document.getElementById(cntKey);
+    if (cntEl) cntEl.textContent = items.length;
+  });
+}
+
+function updateBoardCounts() {
+  document.getElementById('cnt-tqs').textContent = DATA.tqs.length;
+  document.getElementById('cnt-actions').textContent = DATA.actions.length;
+  document.getElementById('cnt-submissions').textContent = DATA.submissions.length;
+}
+
+function updateStatusBar() {
+  const cfg = BOARDS[currentBoard];
+  document.getElementById('sb-board').textContent = cfg.label;
+  document.getElementById('sb-total').textContent = DATA[currentBoard].length + ' items';
+}
+
+// ── CARD BUILDERS ────────────────────────────────────────────────────────────
+function buildCard(table, row) {
+  if (table === 'tqs')         return buildTQCard(row);
+  if (table === 'actions')     return buildActionCard(row);
+  if (table === 'submissions') return buildSubmissionCard(row);
+}
+
+function buildTQCard(row) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.draggable = true;
+  el.dataset.table = 'tqs';
+  el.dataset.idx = row._idx;
+  el.dataset.status = row.Status;
+
+  const tier = (row.EscalationTier || '').toUpperCase();
+  const tierClass = tier === 'P1' ? 'pill-tier-p1' : tier === 'P2' ? 'pill-tier-p2' :
+                    tier === 'P3' ? 'pill-tier-p3' : 'pill-tier-p4';
+
+  const dueInfo = calcSLA(row.DateOpened, 10);
+
+  el.innerHTML = `
+    <div class="card-id">${esc(row.TQID)} · ${esc(row.SourceDocumentNumber)}</div>
+    <div class="card-title">${esc(row.Subject)}</div>
+    <div class="card-meta">
+      ${tier ? `<span class="pill ${tierClass}">${esc(tier)}</span>` : ''}
+      ${row.OriginatingReviewer ? `<span class="pill pill-disc">${esc(row.OriginatingReviewer)}</span>` : ''}
+    </div>
+    <div class="card-footer">
+      <span class="card-owner">${esc(row.ResponseOwner || 'Unassigned')}</span>
+      ${dueInfo ? `<span class="card-due ${dueInfo.cls}">${dueInfo.label}</span>` : ''}
+    </div>`;
+
+  attachDrag(el, 'tqs', row._idx, row.Status);
+  return el;
+}
+
+function buildActionCard(row) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.draggable = true;
+
+  const rag = (row.RAGStatus || '').toUpperCase();
+  const ragClass = rag === 'RED' ? 'pill-rag-red' : rag === 'AMBER' ? 'pill-rag-amber' :
+                   rag === 'GREEN' ? 'pill-rag-green' : 'pill-neutral';
+
+  const dueInfo = calcDue(row.DueDate);
+
+  el.innerHTML = `
+    <div class="card-id">${esc(row.ActionID)} · ${esc(row.Category)}</div>
+    <div class="card-title">${esc(row.Title)}</div>
+    <div class="card-meta">
+      ${rag ? `<span class="pill ${ragClass}">${esc(rag)}</span>` : ''}
+    </div>
+    <div class="card-footer">
+      <span class="card-owner">${esc(row.Owner || 'Unassigned')}</span>
+      ${dueInfo ? `<span class="card-due ${dueInfo.cls}">${dueInfo.label}</span>` : ''}
+    </div>`;
+
+  attachDrag(el, 'actions', row._idx, row.Status);
+  return el;
+}
+
+function buildSubmissionCard(row) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.draggable = true;
+
+  el.innerHTML = `
+    <div class="card-id">${esc(row.DocumentNumber)} Rev ${esc(row.Revision)}</div>
+    <div class="card-title">${esc(row.DocumentTitle)}</div>
+    <div class="card-meta">
+      <span class="pill pill-disc">${esc(row.DNVDisciplineQueue)}</span>
+      <span class="pill pill-neutral">${esc(row.DocumentType)}</span>
+    </div>
+    <div class="card-footer">
+      <span class="card-owner">${esc(row.SubmittingEngineer || '')}</span>
+      <span class="card-due">${esc(row.SubmittedDate || '')}</span>
+    </div>`;
+
+  attachDrag(el, 'submissions', row._idx, row.Status);
+  return el;
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────────────────────
+function attachDrag(el, table, idx, status) {
+  el.addEventListener('dragstart', e => {
+    dragItem = { table, idx, oldStatus: status };
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  el.addEventListener('dragend', () => {
+    el.classList.remove('dragging');
+    document.querySelectorAll('.col-cards').forEach(c => c.classList.remove('drag-over'));
+  });
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+async function onDrop(e, table, newStatus) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragItem) return;
+  if (dragItem.table !== table) { showToast('Cannot move between boards'); return; }
+  if (dragItem.oldStatus === newStatus) return;
+
+  const idx = dragItem.idx;
+  const payload = { Status: newStatus };
+
+  // Extra field updates on status transition
+  if (table === 'tqs' && newStatus === 'Responded') {
+    payload.DateResponded = fmtDate(new Date());
+  }
+  if (table === 'tqs' && newStatus === 'Closed') {
+    payload.DateResponded = payload.DateResponded || fmtDate(new Date());
+  }
+  if (table === 'actions' && newStatus === 'Complete') {
+    payload.LastUpdated = fmtDate(new Date());
+  }
+
+  try {
+    const res = await fetch(`/api/csv/${table}/${idx}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Server error');
+    showToast(`Moved to ${newStatus}`);
+    await loadAll();
+  } catch (err) {
+    showToast('Update failed: ' + err.message);
+  }
+  dragItem = null;
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function switchBoard(name) {
+  currentBoard = name;
+  document.querySelectorAll('.board').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.board-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('board-' + name).classList.add('active');
+  document.querySelectorAll('.board-tab').forEach(t => {
+    if (t.getAttribute('onclick') === `switchBoard('${name}')`) t.classList.add('active');
+  });
+  updateStatusBar();
+}
+
+function calcSLA(dateOpened, slaDays) {
+  if (!dateOpened) return null;
+  const open = new Date(dateOpened);
+  if (isNaN(open)) return null;
+  const due = new Date(open);
+  due.setDate(due.getDate() + slaDays);
+  const diff = Math.round((due - TODAY) / 86400000);
+  if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`, cls: 'overdue' };
+  if (diff <= 3) return { label: `Due in ${diff}d`, cls: 'soon' };
+  return { label: `Due ${fmtDate(due)}`, cls: '' };
+}
+
+function calcDue(dueDate) {
+  if (!dueDate) return null;
+  const d = new Date(dueDate);
+  if (isNaN(d)) return null;
+  const diff = Math.round((d - TODAY) / 86400000);
+  if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`, cls: 'overdue' };
+  if (diff <= 3) return { label: `Due in ${diff}d`, cls: 'soon' };
+  return { label: fmtDate(d), cls: '' };
+}
+
+function fmtDate(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+<script src="/static/auth.js"></script>
+</body>
+</html>
