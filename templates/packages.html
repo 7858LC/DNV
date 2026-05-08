@@ -68,11 +68,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 .filter-sep { flex: 1; }
 
 /* ── MAIN 3-COLUMN LAYOUT ── */
-#main { display: grid; grid-template-columns: 220px 1fr 260px; overflow: hidden; }
+#main { display: grid; grid-template-columns: 220px 1fr 260px;
+  overflow: hidden; min-height: 0; }
 
 /* ── PACKAGE LIST (left) ── */
 #pkg-list-pane { border-right: 1px solid var(--border); overflow-y: auto;
-  display: flex; flex-direction: column; }
+  display: flex; flex-direction: column; min-height: 0; }
 .pkg-list-header { padding: 12px 14px 8px; border-bottom: 1px solid var(--border);
   font-family: var(--font-head); font-size: 11px; font-weight: 600;
   letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
@@ -99,7 +100,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 .pkg-badge.On-Hold            { background:rgba(107,114,128,.15); color:var(--muted); }
 
 /* ── PACKAGE DETAIL (centre) ── */
-#pkg-detail-pane { overflow-y: auto; display: flex; flex-direction: column; }
+#pkg-detail-pane { display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden; }
 .detail-empty { flex: 1; display: flex; align-items: center; justify-content: center;
   color: var(--muted); font-family: var(--font-head); font-size: 15px; opacity: .4; }
 
@@ -122,7 +124,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 .pkg-meta-item .val { color: var(--text); font-weight: 500; }
 
 /* doc table */
-.doc-table-wrap { flex: 1; overflow-y: auto; }
+.doc-table-wrap { flex: 1; overflow-y: auto; min-height: 0; }
 .doc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .doc-table thead tr { background: var(--surface); position: sticky; top: 0; z-index: 5; }
 .doc-table th { padding: 7px 10px; text-align: left; font-family: var(--font-head);
@@ -152,7 +154,8 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
 
 /* add doc row */
 .add-doc-row { display: flex; align-items: center; gap: 6px; padding: 10px 18px;
-  border-top: 2px solid var(--amber); background: var(--surface); }
+  border-top: 2px solid var(--amber); background: var(--surface);
+  flex-shrink: 0; }
 .add-doc-row input { flex: 1; font-family: var(--font-data); font-size: 12px;
   background: var(--surface2); border: 1px solid var(--border); color: var(--text);
   padding: 5px 10px; border-radius: 3px; outline: none; }
@@ -207,7 +210,7 @@ input.cell-edit { font-family: var(--font-data); font-size: 11px; background: va
 
 /* ── VERACITY SYNC PANEL (right) ── */
 #sync-pane { background: var(--surface); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; overflow: hidden; }
+  display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .sync-header { padding: 12px 14px; border-bottom: 1px solid var(--border);
   font-family: var(--font-head); font-size: 12px; font-weight: 600;
   letter-spacing: .1em; color: var(--muted); text-transform: uppercase;
@@ -580,13 +583,8 @@ function renderDetail() {
   _submissions.forEach(s => { subIdx[String(s.DocumentNumber||'').trim()] = s; });
 
   const docsHtml = documents.length === 0
-    ? `<tr><td colspan="7" style="padding:32px 24px;text-align:center">
-        <div style="font-size:22px;margin-bottom:8px">📂</div>
-        <div style="color:var(--fg);font-size:14px;font-weight:600;margin-bottom:6px">No documents yet</div>
-        <div style="color:var(--muted);font-size:12px;margin-bottom:14px">
-          Add submissions below — type a Bastion doc number and press Enter or click + Add
-        </div>
-        <div style="font-size:20px;color:var(--amber);animation:bounce 1.2s infinite">↓</div>
+    ? `<tr><td colspan="7" style="padding:14px 18px;text-align:left;color:var(--muted);font-size:12px">
+        No documents yet — use the <strong style="color:var(--amber)">+ ADD DOC</strong> row below to add approved submissions.
        </td></tr>`
     : documents.map(d => {
         const sub  = subIdx[d.doc_number] || {};
@@ -858,8 +856,9 @@ async function addDocToPackage(pkgId) {
   document.getElementById('add-dnv-num').value = '';
   document.getElementById('add-reply').value   = '';
   await refreshSelected();
-  // Reload eligible list (added doc is now excluded)
   await loadEligibleDocs(pkgId);
+  // Auto-open file panel so coordinator can attach the file immediately
+  openFilePanel(pkgId, doc);
 }
 
 async function removeDoc(pkgId, docNum) {
