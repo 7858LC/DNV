@@ -24,6 +24,7 @@ import io
 from utils import load_config, resolve_path
 from experience_routes import experience_bp
 from comms_routes import comms_bp
+from meeting_minutes_routes import meeting_minutes_bp
 
 # ── CSV write lock ────────────────────────────────────────────────────────────
 # All read-modify-write operations on CSV files must hold this lock.
@@ -34,6 +35,7 @@ _csv_lock = threading.Lock()
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.register_blueprint(experience_bp)
 app.register_blueprint(comms_bp)
+app.register_blueprint(meeting_minutes_bp)
 app.config["JSON_SORT_KEYS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024   # 50 MB upload cap
 app.secret_key = os.environ.get("FLASK_SECRET", "dnv-bastion-dev-key-change-in-prod")

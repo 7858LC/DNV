@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEETING MINUTES</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0A0F1E;
+  --surface:  #111827;
+  --surface2: #1A2234;
+  --border:   #1E2D45;
+  --text:     #E8ECF0;
+  --muted:    #6B7280;
+  --red:      #EF4444;
+  --amber:    #F59E0B;
+  --green:    #22C55E;
+  --blue:     #60A5FA;
+  --violet:   #A78BFA;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ── TOPBAR ── */
+#topbar {
+  height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.brand {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.brand span { color: var(--muted); font-weight: 400; }
+.page-title {
+  font-family: var(--font-head);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--violet);
+  font-weight: 600;
+}
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 5px 14px;
+  border: 1px solid;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.btn-violet { border-color: var(--violet); color: var(--violet); }
+.btn-violet:hover { background: var(--violet); color: var(--bg); }
+.btn-green  { border-color: var(--green);  color: var(--green);  }
+.btn-green:hover  { background: var(--green);  color: var(--bg); }
+.btn-muted  { border-color: var(--muted);  color: var(--muted);  }
+.btn-muted:hover  { background: var(--muted);  color: var(--bg); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── LAYOUT ── */
+#main {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ── LEFT PANEL (INPUT) ── */
+#input-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.meta-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.field-label {
+  font-family: var(--font-head);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 60px;
+}
+.field-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field-input:focus { border-color: var(--violet); }
+.field-input::placeholder { color: var(--muted); }
+
+/* Attendee groups */
+.attendees-section {
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.attendees-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+#attendee-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.attendee-group-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.group-tag {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  flex: 0 0 48px;
+  text-transform: uppercase;
+}
+.attendee-group-row input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.attendee-group-row input:focus { border-color: var(--violet); }
+.attendee-group-row input::placeholder { color: var(--muted); }
+.remove-group-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.remove-group-btn:hover { color: var(--red); }
+#add-group-btn {
+  font-family: var(--font-head);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-top: 4px;
+  width: 100%;
+  text-align: left;
+  transition: border-color 0.15s, color 0.15s;
+}
+#add-group-btn:hover { border-color: var(--violet); color: var(--violet); }
+
+/* Transcript */
+.transcript-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 16px;
+  gap: 8px;
+}
+.transcript-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+#transcript {
+  flex: 1;
+  resize: none;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#transcript:focus { border-color: var(--violet); }
+#transcript::placeholder { color: var(--muted); }
+
+.generate-bar {
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#generate-btn {
+  flex: 1;
+  justify-content: center;
+  font-size: 14px;
+}
+.spinner {
+  width: 12px; height: 12px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── RIGHT PANEL (OUTPUT) ── */
+#output-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+.output-toolbar {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.output-toolbar .panel-header { padding: 0; border: none; flex: 1; }
+#output-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+/* Empty state */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--muted);
+}
+.empty-icon {
+  font-size: 32px;
+  opacity: 0.3;
+}
+.empty-text {
+  font-family: var(--font-head);
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Minutes output */
+#minutes-output { display: none; }
+
+.minutes-header {
+  margin-bottom: 20px;
+}
+.minutes-date {
+  font-family: var(--font-head);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.minutes-attendees {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.attendee-line {
+  font-size: 12px;
+  color: var(--muted);
+}
+.attendee-bullet { color: var(--violet); margin-right: 6px; }
+.minutes-title {
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-left: 3px solid var(--violet);
+  padding-left: 10px;
+  margin-top: 10px;
+}
+
+.minutes-body {
+  margin-bottom: 28px;
+}
+.section-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+.minutes-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.minute-item {
+  display: flex;
+  gap: 8px;
+  line-height: 1.5;
+  font-size: 13px;
+}
+.minute-item.nested {
+  padding-left: 20px;
+}
+.minute-bullet { color: var(--violet); flex-shrink: 0; margin-top: 1px; }
+.minute-bullet.sub { color: var(--muted); }
+.minute-text { flex: 1; }
+
+/* Action items */
+.action-items-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  padding: 14px 16px;
+}
+.action-items-header {
+  font-family: var(--font-head);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.action-count {
+  background: var(--amber);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.action-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.action-table th {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 4px 8px 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.action-table td {
+  padding: 6px 8px 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.action-table tr:last-child td { border-bottom: none; }
+.owner-tag {
+  font-family: var(--font-head);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--green);
+  white-space: nowrap;
+}
+.owner-tag.tbd { color: var(--muted); }
+.due-tag {
+  font-size: 11px;
+  color: var(--amber);
+  white-space: nowrap;
+}
+
+/* Error state */
+#error-bar {
+  display: none;
+  background: color-mix(in srgb, var(--red) 15%, var(--surface));
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 8px 16px;
+  font-size: 12px;
+  margin: 12px 24px 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a href="/" class="brand">DNV <span>BASTION</span></a>
+  <div class="page-title">/ MEETING MINUTES</div>
+  <div class="topbar-right">
+    <button class="btn btn-muted" id="copy-btn" style="display:none" onclick="copyMinutes()">COPY ↗</button>
+    <button class="btn btn-green" id="export-btn" style="display:none" onclick="exportMarkdown()">EXPORT .MD ↓</button>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- ── LEFT: INPUT ── -->
+  <div id="input-panel">
+    <div class="panel-header">Input</div>
+
+    <div class="meta-section">
+      <div class="field-row">
+        <span class="field-label">Date</span>
+        <input class="field-input" id="meeting-date" type="text" placeholder="5/11/26" value="{{ today }}">
+      </div>
+      <div class="field-row">
+        <span class="field-label">Title</span>
+        <input class="field-input" id="meeting-title" type="text" placeholder="Structural PDR Kickoff">
+      </div>
+    </div>
+
+    <div class="attendees-section">
+      <div class="attendees-label">Attendees</div>
+      <div id="attendee-groups">
+        <div class="attendee-group-row">
+          <span class="group-tag">Grp 1</span>
+          <input type="text" placeholder="Joe, Joseph, Larry, Oli, Alfie">
+          <button class="remove-group-btn" onclick="removeGroup(this)" title="Remove">×</button>
+        </div>
+        <div class="attendee-group-row">
+          <span class="group-tag">Grp 2</span>
+          <input type="text" placeholder="Chris, Sebastian, Jonathan">
+          <button class="remove-group-btn" onclick="removeGroup(this)" title="Remove">×</button>
+        </div>
+      </div>
+      <button id="add-group-btn" onclick="addGroup()">+ Add group</button>
+    </div>
+
+    <div class="transcript-section">
+      <div class="transcript-label">Transcript / Raw Notes</div>
+      <textarea id="transcript" placeholder="Paste your meeting transcript or rough notes here. Can be messy — full sentences, voice-to-text output, shorthand. The more context, the better the output.&#10;&#10;Example:&#10;We kicked off the structural PDR. Mathias will support because he has experience with large oddly shaped deployments and concrete. Sebastian is the main structural expert..."></textarea>
+    </div>
+
+    <div class="generate-bar">
+      <button class="btn btn-violet" id="generate-btn" onclick="generate()" style="flex:1;justify-content:center;font-size:14px">
+        <span class="spinner" id="spinner"></span>
+        <span id="generate-label">GENERATE MINUTES</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: OUTPUT ── -->
+  <div id="output-panel">
+    <div class="output-toolbar">
+      <div class="panel-header">Output</div>
+    </div>
+
+    <div id="error-bar"></div>
+
+    <div id="output-scroll">
+      <div id="empty-state">
+        <div class="empty-icon">◈</div>
+        <div class="empty-text">Paste transcript and generate</div>
+      </div>
+
+      <div id="minutes-output">
+        <div class="minutes-header">
+          <div class="minutes-date" id="out-date"></div>
+          <div class="minutes-attendees" id="out-attendees"></div>
+          <div class="minutes-title" id="out-title"></div>
+        </div>
+
+        <div class="minutes-body">
+          <div class="section-label">Notes</div>
+          <div class="minutes-bullets" id="out-bullets"></div>
+        </div>
+
+        <div class="action-items-section" id="out-actions-section" style="display:none">
+          <div class="action-items-header">
+            Action Items
+            <span class="action-count" id="action-count">0</span>
+          </div>
+          <table class="action-table">
+            <thead>
+              <tr>
+                <th style="width:55%">Task</th>
+                <th style="width:20%">Owner</th>
+                <th style="width:25%">Due</th>
+              </tr>
+            </thead>
+            <tbody id="out-actions-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let _lastResult = null;
+
+function getAttendeeGroups() {
+  return Array.from(document.querySelectorAll('#attendee-groups .attendee-group-row input'))
+    .map(el => el.value.trim())
+    .filter(Boolean);
+}
+
+function addGroup() {
+  const container = document.getElementById('attendee-groups');
+  const idx = container.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'attendee-group-row';
+  row.innerHTML = `
+    <span class="group-tag">Grp ${idx}</span>
+    <input type="text" placeholder="Names, comma separated">
+    <button class="remove-group-btn" onclick="removeGroup(this)" title="Remove">×</button>
+  `;
+  container.appendChild(row);
+}
+
+function removeGroup(btn) {
+  const container = document.getElementById('attendee-groups');
+  if (container.children.length <= 1) return;
+  btn.closest('.attendee-group-row').remove();
+  // Renumber
+  Array.from(container.querySelectorAll('.group-tag')).forEach((tag, i) => {
+    tag.textContent = `Grp ${i + 1}`;
+  });
+}
+
+function showError(msg) {
+  const bar = document.getElementById('error-bar');
+  bar.textContent = msg;
+  bar.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error-bar').style.display = 'none';
+}
+
+async function generate() {
+  const transcript = document.getElementById('transcript').value.trim();
+  if (!transcript) { showError('Paste a transcript first.'); return; }
+  hideError();
+
+  const btn = document.getElementById('generate-btn');
+  const spinner = document.getElementById('spinner');
+  const label = document.getElementById('generate-label');
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  label.textContent = 'PROCESSING…';
+
+  const payload = {
+    transcript,
+    date: document.getElementById('meeting-date').value.trim(),
+    title: document.getElementById('meeting-title').value.trim(),
+    attendee_groups: getAttendeeGroups(),
+  };
+
+  try {
+    const resp = await fetch('/api/meeting-minutes/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) {
+      showError(data.error || 'Generation failed.');
+      return;
+    }
+    _lastResult = { ...payload, ...data };
+    renderOutput(payload, data);
+  } catch (e) {
+    showError('Network error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    label.textContent = 'GENERATE MINUTES';
+  }
+}
+
+function renderOutput(meta, data) {
+  // Show output, hide empty state
+  document.getElementById('empty-state').style.display = 'none';
+  const out = document.getElementById('minutes-output');
+  out.style.display = 'block';
+
+  // Date
+  const dateEl = document.getElementById('out-date');
+  dateEl.textContent = meta.date || '';
+  dateEl.style.display = meta.date ? 'block' : 'none';
+
+  // Attendees
+  const attEl = document.getElementById('out-attendees');
+  attEl.innerHTML = '';
+  (meta.attendee_groups || []).forEach(g => {
+    const line = document.createElement('div');
+    line.className = 'attendee-line';
+    line.innerHTML = `<span class="attendee-bullet">•</span>${escHtml(g)}`;
+    attEl.appendChild(line);
+  });
+
+  // Title
+  const titleEl = document.getElementById('out-title');
+  titleEl.textContent = meta.title || '';
+  titleEl.style.display = meta.title ? 'block' : 'none';
+
+  // Bullets
+  const bulletsEl = document.getElementById('out-bullets');
+  bulletsEl.innerHTML = '';
+  const lines = (data.minutes || '').split('\n');
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    const isNested = line.startsWith('\t') || line.startsWith('  ');
+    const text = line.replace(/^[\t\s]*[•\-]\s*/, '').trim();
+    if (!text) return;
+    const item = document.createElement('div');
+    item.className = 'minute-item' + (isNested ? ' nested' : '');
+    item.innerHTML = `<span class="minute-bullet${isNested ? ' sub' : ''}">${isNested ? '◦' : '•'}</span><span class="minute-text">${escHtml(text)}</span>`;
+    bulletsEl.appendChild(item);
+  });
+
+  // Action items
+  const actions = data.action_items || [];
+  const actSection = document.getElementById('out-actions-section');
+  const actBody = document.getElementById('out-actions-body');
+  const actCount = document.getElementById('action-count');
+  actBody.innerHTML = '';
+  if (actions.length > 0) {
+    actSection.style.display = 'block';
+    actCount.textContent = actions.length;
+    actions.forEach(item => {
+      const isTbd = !item.owner || item.owner === 'TBD';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escHtml(item.task || '')}</td>
+        <td><span class="owner-tag${isTbd ? ' tbd' : ''}">${escHtml(item.owner || 'TBD')}</span></td>
+        <td><span class="due-tag">${escHtml(item.due || '')}</span></td>
+      `;
+      actBody.appendChild(tr);
+    });
+  } else {
+    actSection.style.display = 'none';
+  }
+
+  // Show export/copy
+  document.getElementById('export-btn').style.display = 'flex';
+  document.getElementById('copy-btn').style.display = 'flex';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function exportMarkdown() {
+  if (!_lastResult) return;
+  const resp = await fetch('/api/meeting-minutes/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(_lastResult),
+  });
+  if (!resp.ok) { showError('Export failed.'); return; }
+  const blob = await resp.blob();
+  const cd = resp.headers.get('Content-Disposition') || '';
+  const match = cd.match(/filename="([^"]+)"/);
+  const filename = match ? match[1] : 'minutes.md';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyMinutes() {
+  if (!_lastResult) return;
+  const { date, title, attendee_groups, minutes, action_items } = _lastResult;
+  let text = '';
+  if (date) text += date + '\n';
+  (attendee_groups || []).forEach(g => { text += `• ${g}\n`; });
+  if (title) text += `• ${title}\n`;
+  text += '\n' + (minutes || '');
+  if (action_items && action_items.length) {
+    text += '\n\nAction Items:\n';
+    action_items.forEach(i => {
+      text += `• ${i.task}  [${i.owner || 'TBD'}]${i.due ? '  — ' + i.due : ''}\n`;
+    });
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'COPIED ✓';
+    setTimeout(() => { btn.textContent = 'COPY ↗'; }, 1800);
+  });
+}
+
+// Ctrl+Enter to generate
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generate();
+});
+</script>
+</body>
+</html>
