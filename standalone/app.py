@@ -28,6 +28,7 @@ STYLE RULES:
 - Action items are written as imperatives ("Add...", "Look for...", "Review...")
 - Nested bullets only for genuinely subordinate sub-points
 - No "The team discussed..." or "It was noted that..." — just the fact
+- If a physical measurement appears in metric, append the imperial equivalent in parentheses — e.g. "50 mm (2 in)", "10 kN (2,250 lbf)", "200 MPa (29 ksi)". If already imperial, leave it. Do NOT convert document numbers, part numbers, bolt grades, or standard codes (e.g. C101, M16, S355 are not measurements)
 
 EXAMPLE INPUT (rough transcript):
 "We kicked off the structural PDR today. Mathias is going to help because he has experience with large oddly shaped deployments and with concrete. Sebastian will be the main structural expert. Larry's tracker should be done by end of this week. We need to look at the leak path through the viewport retention bolts. We should add the viewport preliminary analysis to the package. Oli and Alfie might have comments on the AIP, or we can find them on Veracity. Chris confirmed we're manufacturing to C101, not SHIPS. He also asked about the hull finish - it will be sealed but that's not defined yet, same for the stiffener edges. For the analysis there are two steps - first just steel no concrete, then add concrete to check interface stresses. Oli brought up starting an ITP. We also need to add a stripped down ANSYS model."
