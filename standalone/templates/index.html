@@ -14,12 +14,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:      #0A0F1E;
-  --surface: #111827;
-  --s2:      #1A2234;
-  --border:  #1E2D45;
+  --bg:      #0D1526;
+  --surface: #152035;
+  --s2:      #1C2A42;
+  --border:  #243550;
   --text:    #E8ECF0;
-  --muted:   #6B7280;
+  --muted:   #7B8EA8;
   --red:     #EF4444;
   --amber:   #F59E0B;
   --green:   #22C55E;
@@ -31,7 +31,8 @@
 html { height: 100%; }
 body {
   min-height: 100%;
-  background: var(--bg);
+  background: linear-gradient(160deg, #1a2a45 0%, #0d1526 45%, #111e38 100%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--fm);
   font-size: 14px;
@@ -425,8 +426,14 @@ textarea {
 
   <!-- Meeting info -->
   <div class="section">
-    <span class="label">Date</span>
-    <input type="text" id="meeting-date" value="{{ today }}" placeholder="5/11/26">
+    <span class="label">Date &amp; Time</span>
+    <input type="text" id="meeting-date" value="{{ today }}" placeholder="5/12/26" style="margin-bottom:6px">
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-family:var(--fh);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex-shrink:0">From</span>
+      <input type="text" id="time-from" placeholder="9:00 AM" style="flex:1">
+      <span style="font-family:var(--fh);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex-shrink:0">To</span>
+      <input type="text" id="time-to" placeholder="10:30 AM" style="flex:1">
+    </div>
   </div>
   <div class="section">
     <span class="label">Meeting Title</span>
@@ -657,6 +664,8 @@ async function generate() {
   const payload = {
     transcript,
     date:            document.getElementById('meeting-date').value.trim(),
+    time_from:       document.getElementById('time-from').value.trim(),
+    time_to:         document.getElementById('time-to').value.trim(),
     title:           document.getElementById('meeting-title').value.trim(),
     attendee_groups: getGroups(),
   };
@@ -689,7 +698,12 @@ function renderOutput(meta, data) {
   document.getElementById('output-content').style.display = 'block';
 
   const dateEl = document.getElementById('out-date');
-  dateEl.textContent = meta.date || '';
+  let dateStr = meta.date || '';
+  if (meta.time_from || meta.time_to) {
+    const t = [meta.time_from, meta.time_to].filter(Boolean).join(' – ');
+    dateStr += (dateStr ? '  ' : '') + t;
+  }
+  dateEl.textContent = dateStr;
 
   const attEl = document.getElementById('out-attendees');
   attEl.innerHTML = '';

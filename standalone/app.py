@@ -140,7 +140,10 @@ def process():
     if body.get("title"):
         parts.append(f"Meeting: {body['title']}")
     if body.get("date"):
-        parts.append(f"Date: {body['date']}")
+        time_str = ""
+        if body.get("time_from") or body.get("time_to"):
+            time_str = "  " + " – ".join(filter(None, [body.get("time_from",""), body.get("time_to","")]))
+        parts.append(f"Date: {body['date']}{time_str}")
     groups = [g.strip() for g in body.get("attendee_groups", []) if g.strip()]
     if groups:
         parts.append("Attendees:\n" + "\n".join(f"  Group {i+1}: {g}" for i, g in enumerate(groups)))
@@ -167,6 +170,8 @@ def process():
 def export():
     body = request.get_json(force=True)
     meeting_date = body.get("date", "")
+    time_from    = body.get("time_from", "")
+    time_to      = body.get("time_to", "")
     title        = body.get("title", "")
     groups       = [g.strip() for g in body.get("attendee_groups", []) if g.strip()]
     minutes_text = body.get("minutes", "")
@@ -174,7 +179,8 @@ def export():
 
     lines = []
     if meeting_date:
-        lines.append(meeting_date)
+        time_str = ("  " + " – ".join(filter(None, [time_from, time_to]))) if (time_from or time_to) else ""
+        lines.append(meeting_date + time_str)
     for g in groups:
         lines.append(f"• {g}")
     if title:
