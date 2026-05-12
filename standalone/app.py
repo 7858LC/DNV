@@ -17,7 +17,7 @@ from flask import Flask, render_template, request, jsonify, Response
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
 
-CANDIDATE_PORTS = [5050, 5051, 8080, 8888, 8000]
+CANDIDATE_PORTS = [5200, 5201, 5202]
 
 SYSTEM_PROMPT = """You are a technical meeting minutes formatter. Convert raw transcripts or rough notes into concise, structured meeting minutes that match the user's voice exactly.
 
