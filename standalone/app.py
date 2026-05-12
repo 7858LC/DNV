@@ -100,8 +100,9 @@ def make_ssl_files(lan_ip: str) -> tuple[str, str] | None:
             .sign(key, hashes.SHA256())
         )
 
-        cert_path = Path("cert.pem")
-        key_path  = Path("key.pem")
+        base = Path(__file__).parent
+        cert_path = base / "cert.pem"
+        key_path  = base / "key.pem"
         cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
         key_path.write_bytes(key.private_bytes(
             serialization.Encoding.PEM,
