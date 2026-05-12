@@ -31,7 +31,7 @@ if not defined ANTHROPIC_API_KEY (
 
 :: ── Dependencies ─────────────────────────────────────────────────────────────
 echo  [..] Installing dependencies...
-%PYTHON% -m pip install flask anthropic -q --disable-pip-version-check
+%PYTHON% -m pip install flask anthropic pyopenssl -q --disable-pip-version-check
 echo  [OK] Ready
 
 :: ── Start ─────────────────────────────────────────────────────────────────────
