@@ -94,6 +94,8 @@ html, body {
 .btn-violet:hover { background: var(--violet); color: var(--bg); }
 .btn-green  { border-color: var(--green);  color: var(--green);  }
 .btn-green:hover  { background: var(--green);  color: var(--bg); }
+.btn-red    { border-color: var(--red);    color: var(--red);    }
+.btn-red:hover    { background: var(--red);    color: var(--bg); }
 .btn-muted  { border-color: var(--muted);  color: var(--muted);  }
 .btn-muted:hover  { background: var(--muted);  color: var(--bg); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -231,6 +233,106 @@ html, body {
 }
 #add-group-btn:hover { border-color: var(--violet); color: var(--violet); }
 
+/* ── RECORDING BAR ── */
+.rec-section {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rec-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rec-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rec-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#rec-btn {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 5px 14px;
+  border: 1px solid var(--red);
+  background: none;
+  color: var(--red);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+#rec-btn:hover { background: var(--red); color: var(--bg); }
+#rec-btn.recording {
+  background: var(--red);
+  color: var(--bg);
+}
+#rec-btn.recording:hover { background: color-mix(in srgb, var(--red) 80%, #000); }
+.rec-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+#rec-btn.recording .rec-dot {
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+#rec-timer {
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--red);
+  min-width: 38px;
+  display: none;
+  font-variant-numeric: tabular-nums;
+}
+#rec-clear {
+  font-family: var(--font-head);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s;
+}
+#rec-clear:hover { color: var(--red); }
+
+/* Interim preview strip */
+#interim-preview {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  min-height: 16px;
+  line-height: 1.4;
+  padding: 0 2px;
+  display: none;
+}
+
+/* No-speech-api warning */
+#no-asr-warn {
+  font-size: 11px;
+  color: var(--amber);
+  padding: 2px 0;
+  display: none;
+}
+
 /* Transcript */
 .transcript-section {
   flex: 1;
@@ -240,14 +342,31 @@ html, body {
   padding: 12px 16px;
   gap: 8px;
 }
+.transcript-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
 .transcript-label {
   font-family: var(--font-head);
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--muted);
-  flex-shrink: 0;
 }
+#clear-transcript-btn {
+  font-family: var(--font-head);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+#clear-transcript-btn:hover { color: var(--red); }
 #transcript {
   flex: 1;
   resize: none;
@@ -262,6 +381,7 @@ html, body {
   transition: border-color 0.15s;
 }
 #transcript:focus { border-color: var(--violet); }
+#transcript.listening { border-color: var(--red); }
 #transcript::placeholder { color: var(--muted); }
 
 .generate-bar {
@@ -271,11 +391,6 @@ html, body {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-}
-#generate-btn {
-  flex: 1;
-  justify-content: center;
-  font-size: 14px;
 }
 .spinner {
   width: 12px; height: 12px;
@@ -320,10 +435,7 @@ html, body {
   gap: 12px;
   color: var(--muted);
 }
-.empty-icon {
-  font-size: 32px;
-  opacity: 0.3;
-}
+.empty-icon { font-size: 32px; opacity: 0.3; }
 .empty-text {
   font-family: var(--font-head);
   font-size: 14px;
@@ -334,9 +446,7 @@ html, body {
 /* Minutes output */
 #minutes-output { display: none; }
 
-.minutes-header {
-  margin-bottom: 20px;
-}
+.minutes-header { margin-bottom: 20px; }
 .minutes-date {
   font-family: var(--font-head);
   font-size: 22px;
@@ -351,10 +461,7 @@ html, body {
   gap: 2px;
   margin-bottom: 8px;
 }
-.attendee-line {
-  font-size: 12px;
-  color: var(--muted);
-}
+.attendee-line { font-size: 12px; color: var(--muted); }
 .attendee-bullet { color: var(--violet); margin-right: 6px; }
 .minutes-title {
   font-family: var(--font-head);
@@ -368,9 +475,7 @@ html, body {
   margin-top: 10px;
 }
 
-.minutes-body {
-  margin-bottom: 28px;
-}
+.minutes-body { margin-bottom: 28px; }
 .section-label {
   font-family: var(--font-head);
   font-size: 10px;
@@ -381,20 +486,14 @@ html, body {
   border-bottom: 1px solid var(--border);
   padding-bottom: 4px;
 }
-.minutes-bullets {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+.minutes-bullets { display: flex; flex-direction: column; gap: 4px; }
 .minute-item {
   display: flex;
   gap: 8px;
   line-height: 1.5;
   font-size: 13px;
 }
-.minute-item.nested {
-  padding-left: 20px;
-}
+.minute-item.nested { padding-left: 20px; }
 .minute-bullet { color: var(--violet); flex-shrink: 0; margin-top: 1px; }
 .minute-bullet.sub { color: var(--muted); }
 .minute-text { flex: 1; }
@@ -425,10 +524,7 @@ html, body {
   padding: 1px 6px;
   border-radius: 2px;
 }
-.action-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+.action-table { width: 100%; border-collapse: collapse; }
 .action-table th {
   font-family: var(--font-head);
   font-size: 10px;
@@ -454,11 +550,7 @@ html, body {
   white-space: nowrap;
 }
 .owner-tag.tbd { color: var(--muted); }
-.due-tag {
-  font-size: 11px;
-  color: var(--amber);
-  white-space: nowrap;
-}
+.due-tag { font-size: 11px; color: var(--amber); white-space: nowrap; }
 
 /* Error state */
 #error-bar {
@@ -523,9 +615,29 @@ html, body {
       <button id="add-group-btn" onclick="addGroup()">+ Add group</button>
     </div>
 
+    <!-- ── RECORDING CONTROLS ── -->
+    <div class="rec-section">
+      <div class="rec-label-row">
+        <span class="rec-label">Live Transcription</span>
+        <div class="rec-controls">
+          <span id="rec-timer">0:00</span>
+          <button id="rec-btn" onclick="toggleRecording()">
+            <span class="rec-dot"></span>
+            <span id="rec-label">REC</span>
+          </button>
+        </div>
+      </div>
+      <div id="no-asr-warn">⚠ Live transcription requires Chrome or Edge</div>
+      <div id="interim-preview"></div>
+    </div>
+
+    <!-- ── TRANSCRIPT ── -->
     <div class="transcript-section">
-      <div class="transcript-label">Transcript / Raw Notes</div>
-      <textarea id="transcript" placeholder="Paste your meeting transcript or rough notes here. Can be messy — full sentences, voice-to-text output, shorthand. The more context, the better the output.&#10;&#10;Example:&#10;We kicked off the structural PDR. Mathias will support because he has experience with large oddly shaped deployments and concrete. Sebastian is the main structural expert..."></textarea>
+      <div class="transcript-label-row">
+        <span class="transcript-label">Transcript</span>
+        <button id="clear-transcript-btn" onclick="clearTranscript()">Clear</button>
+      </div>
+      <textarea id="transcript" placeholder="Speak into your mic using the REC button above, or paste raw notes / voice-to-text output here.&#10;&#10;Can be messy — full sentences, shorthand, speaker labels. The more context, the better."></textarea>
     </div>
 
     <div class="generate-bar">
@@ -547,7 +659,7 @@ html, body {
     <div id="output-scroll">
       <div id="empty-state">
         <div class="empty-icon">◈</div>
-        <div class="empty-text">Paste transcript and generate</div>
+        <div class="empty-text">Record or paste — then generate</div>
       </div>
 
       <div id="minutes-output">
@@ -585,8 +697,136 @@ html, body {
 </div>
 
 <script>
-let _lastResult = null;
+// ── STATE ──────────────────────────────────────────────────────────────────
+let _lastResult   = null;
+let _recognition  = null;
+let _isRecording  = false;
+let _timerInterval = null;
+let _elapsedSecs  = 0;
 
+// ── SPEECH RECOGNITION SETUP ───────────────────────────────────────────────
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+  document.getElementById('no-asr-warn').style.display = 'block';
+  document.getElementById('rec-btn').disabled = true;
+} else {
+  initRecognition();
+}
+
+function initRecognition() {
+  _recognition = new SpeechRecognition();
+  _recognition.continuous     = true;
+  _recognition.interimResults = true;
+  _recognition.lang           = 'en-US';
+  _recognition.maxAlternatives = 1;
+
+  _recognition.onresult = onRecognitionResult;
+  _recognition.onerror  = onRecognitionError;
+
+  // Auto-restart on end if we're still in recording state
+  // (Chrome stops after ~60s silence)
+  _recognition.onend = () => {
+    if (_isRecording) {
+      try { _recognition.start(); } catch (_) {}
+    }
+  };
+}
+
+function onRecognitionResult(event) {
+  let interimText = '';
+  const ta = document.getElementById('transcript');
+
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    const result = event.results[i];
+    if (result.isFinal) {
+      const words = result[0].transcript.trim();
+      if (words) {
+        const current = ta.value;
+        // Add a space between chunks if there's existing text not ending in newline/space
+        const sep = current && !current.match(/[\s]$/) ? ' ' : '';
+        ta.value = current + sep + words;
+        ta.scrollTop = ta.scrollHeight;
+      }
+    } else {
+      interimText += result[0].transcript;
+    }
+  }
+
+  const preview = document.getElementById('interim-preview');
+  if (interimText) {
+    preview.textContent = interimText;
+    preview.style.display = 'block';
+  } else {
+    preview.textContent = '';
+    preview.style.display = 'none';
+  }
+}
+
+function onRecognitionError(event) {
+  // 'no-speech' is normal — just keep going
+  if (event.error === 'no-speech') return;
+  // 'aborted' fires when we call stop() ourselves
+  if (event.error === 'aborted') return;
+  showError('Microphone error: ' + event.error);
+  stopRecording();
+}
+
+// ── RECORDING CONTROLS ─────────────────────────────────────────────────────
+function toggleRecording() {
+  if (_isRecording) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  if (!_recognition) return;
+  try { _recognition.start(); } catch (_) { return; }
+
+  _isRecording = true;
+  _elapsedSecs = 0;
+
+  const btn = document.getElementById('rec-btn');
+  btn.classList.add('recording');
+  document.getElementById('rec-label').textContent = 'STOP';
+  document.getElementById('rec-timer').style.display = 'inline';
+  document.getElementById('transcript').classList.add('listening');
+  document.getElementById('interim-preview').style.display = 'block';
+
+  _timerInterval = setInterval(() => {
+    _elapsedSecs++;
+    const m = Math.floor(_elapsedSecs / 60);
+    const s = String(_elapsedSecs % 60).padStart(2, '0');
+    document.getElementById('rec-timer').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function stopRecording() {
+  _isRecording = false;
+  clearInterval(_timerInterval);
+
+  if (_recognition) {
+    try { _recognition.stop(); } catch (_) {}
+  }
+
+  const btn = document.getElementById('rec-btn');
+  btn.classList.remove('recording');
+  document.getElementById('rec-label').textContent = 'REC';
+  document.getElementById('transcript').classList.remove('listening');
+
+  // Clear interim
+  const preview = document.getElementById('interim-preview');
+  preview.textContent = '';
+  preview.style.display = 'none';
+}
+
+function clearTranscript() {
+  document.getElementById('transcript').value = '';
+  const preview = document.getElementById('interim-preview');
+  preview.textContent = '';
+  preview.style.display = 'none';
+}
+
+// ── ATTENDEES ──────────────────────────────────────────────────────────────
 function getAttendeeGroups() {
   return Array.from(document.querySelectorAll('#attendee-groups .attendee-group-row input'))
     .map(el => el.value.trim())
@@ -610,12 +850,12 @@ function removeGroup(btn) {
   const container = document.getElementById('attendee-groups');
   if (container.children.length <= 1) return;
   btn.closest('.attendee-group-row').remove();
-  // Renumber
   Array.from(container.querySelectorAll('.group-tag')).forEach((tag, i) => {
     tag.textContent = `Grp ${i + 1}`;
   });
 }
 
+// ── ERROR ──────────────────────────────────────────────────────────────────
 function showError(msg) {
   const bar = document.getElementById('error-bar');
   bar.textContent = msg;
@@ -625,36 +865,37 @@ function hideError() {
   document.getElementById('error-bar').style.display = 'none';
 }
 
+// ── GENERATE ───────────────────────────────────────────────────────────────
 async function generate() {
+  // Stop recording first if active
+  if (_isRecording) stopRecording();
+
   const transcript = document.getElementById('transcript').value.trim();
-  if (!transcript) { showError('Paste a transcript first.'); return; }
+  if (!transcript) { showError('No transcript to process.'); return; }
   hideError();
 
-  const btn = document.getElementById('generate-btn');
+  const btn    = document.getElementById('generate-btn');
   const spinner = document.getElementById('spinner');
-  const label = document.getElementById('generate-label');
+  const label  = document.getElementById('generate-label');
   btn.disabled = true;
   spinner.style.display = 'inline-block';
   label.textContent = 'PROCESSING…';
 
   const payload = {
     transcript,
-    date: document.getElementById('meeting-date').value.trim(),
-    title: document.getElementById('meeting-title').value.trim(),
-    attendee_groups: getAttendeeGroups(),
+    date:             document.getElementById('meeting-date').value.trim(),
+    title:            document.getElementById('meeting-title').value.trim(),
+    attendee_groups:  getAttendeeGroups(),
   };
 
   try {
     const resp = await fetch('/api/meeting-minutes/process', {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body:    JSON.stringify(payload),
     });
     const data = await resp.json();
-    if (!resp.ok || data.error) {
-      showError(data.error || 'Generation failed.');
-      return;
-    }
+    if (!resp.ok || data.error) { showError(data.error || 'Generation failed.'); return; }
     _lastResult = { ...payload, ...data };
     renderOutput(payload, data);
   } catch (e) {
@@ -666,18 +907,15 @@ async function generate() {
   }
 }
 
+// ── RENDER OUTPUT ──────────────────────────────────────────────────────────
 function renderOutput(meta, data) {
-  // Show output, hide empty state
   document.getElementById('empty-state').style.display = 'none';
-  const out = document.getElementById('minutes-output');
-  out.style.display = 'block';
+  document.getElementById('minutes-output').style.display = 'block';
 
-  // Date
   const dateEl = document.getElementById('out-date');
   dateEl.textContent = meta.date || '';
   dateEl.style.display = meta.date ? 'block' : 'none';
 
-  // Attendees
   const attEl = document.getElementById('out-attendees');
   attEl.innerHTML = '';
   (meta.attendee_groups || []).forEach(g => {
@@ -687,16 +925,13 @@ function renderOutput(meta, data) {
     attEl.appendChild(line);
   });
 
-  // Title
   const titleEl = document.getElementById('out-title');
   titleEl.textContent = meta.title || '';
   titleEl.style.display = meta.title ? 'block' : 'none';
 
-  // Bullets
   const bulletsEl = document.getElementById('out-bullets');
   bulletsEl.innerHTML = '';
-  const lines = (data.minutes || '').split('\n');
-  lines.forEach(line => {
+  (data.minutes || '').split('\n').forEach(line => {
     if (!line.trim()) return;
     const isNested = line.startsWith('\t') || line.startsWith('  ');
     const text = line.replace(/^[\t\s]*[•\-]\s*/, '').trim();
@@ -707,15 +942,13 @@ function renderOutput(meta, data) {
     bulletsEl.appendChild(item);
   });
 
-  // Action items
-  const actions = data.action_items || [];
+  const actions    = data.action_items || [];
   const actSection = document.getElementById('out-actions-section');
-  const actBody = document.getElementById('out-actions-body');
-  const actCount = document.getElementById('action-count');
+  const actBody    = document.getElementById('out-actions-body');
   actBody.innerHTML = '';
   if (actions.length > 0) {
     actSection.style.display = 'block';
-    actCount.textContent = actions.length;
+    document.getElementById('action-count').textContent = actions.length;
     actions.forEach(item => {
       const isTbd = !item.owner || item.owner === 'TBD';
       const tr = document.createElement('tr');
@@ -730,9 +963,8 @@ function renderOutput(meta, data) {
     actSection.style.display = 'none';
   }
 
-  // Show export/copy
   document.getElementById('export-btn').style.display = 'flex';
-  document.getElementById('copy-btn').style.display = 'flex';
+  document.getElementById('copy-btn').style.display   = 'flex';
 }
 
 function escHtml(str) {
@@ -743,22 +975,22 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ── EXPORT & COPY ──────────────────────────────────────────────────────────
 async function exportMarkdown() {
   if (!_lastResult) return;
   const resp = await fetch('/api/meeting-minutes/export', {
-    method: 'POST',
+    method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(_lastResult),
+    body:    JSON.stringify(_lastResult),
   });
   if (!resp.ok) { showError('Export failed.'); return; }
   const blob = await resp.blob();
-  const cd = resp.headers.get('Content-Disposition') || '';
+  const cd   = resp.headers.get('Content-Disposition') || '';
   const match = cd.match(/filename="([^"]+)"/);
   const filename = match ? match[1] : 'minutes.md';
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  a.click();
+  a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
 
