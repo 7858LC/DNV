@@ -1,12 +1,16 @@
 """
 Meeting Minutes – standalone app.
 Run: python app.py
-Then open http://localhost:<port> or http://<your-LAN-IP>:<port> on any device.
+Then open the URL printed in the console on any device on the same Wi-Fi.
 """
 from __future__ import annotations
 import json
 import os
 import socket
+import ssl
+import datetime
+import ipaddress
+from pathlib import Path
 from datetime import date
 from flask import Flask, render_template, request, jsonify, Response
 
@@ -65,6 +69,51 @@ def find_free_port() -> int:
         return s.getsockname()[1]
 
 
+def make_ssl_files(lan_ip: str) -> tuple[str, str] | None:
+    """Generate a self-signed cert using the cryptography package."""
+    try:
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "minutes")])
+        san_list = [
+            x509.DNSName("localhost"),
+            x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+        ]
+        try:
+            san_list.append(x509.IPAddress(ipaddress.IPv4Address(lan_ip)))
+        except Exception:
+            pass
+
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(datetime.datetime.utcnow())
+            .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+            .add_extension(x509.SubjectAlternativeName(san_list), critical=False)
+            .sign(key, hashes.SHA256())
+        )
+
+        cert_path = Path("cert.pem")
+        key_path  = Path("key.pem")
+        cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+        key_path.write_bytes(key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.TraditionalOpenSSL,
+            serialization.NoEncryption(),
+        ))
+        return str(cert_path), str(key_path)
+    except Exception as e:
+        print(f"  [!] Could not create HTTPS cert ({e})")
+        return None
+
+
 @app.route("/")
 def index():
     today = date.today().strftime("%-m/%-d/%y") if os.name != "nt" else date.today().strftime("%#m/%#d/%y")
@@ -117,11 +166,11 @@ def process():
 @app.route("/api/export", methods=["POST"])
 def export():
     body = request.get_json(force=True)
-    meeting_date   = body.get("date", "")
-    title          = body.get("title", "")
-    groups         = [g.strip() for g in body.get("attendee_groups", []) if g.strip()]
-    minutes_text   = body.get("minutes", "")
-    action_items   = body.get("action_items", [])
+    meeting_date = body.get("date", "")
+    title        = body.get("title", "")
+    groups       = [g.strip() for g in body.get("attendee_groups", []) if g.strip()]
+    minutes_text = body.get("minutes", "")
+    action_items = body.get("action_items", [])
 
     lines = []
     if meeting_date:
@@ -151,18 +200,23 @@ def export():
 if __name__ == "__main__":
     port   = find_free_port()
     lan_ip = get_lan_ip()
+    ssl_files = make_ssl_files(lan_ip)
+    proto = "https" if ssl_files else "http"
+
     print()
     print("  ┌─────────────────────────────────────────────┐")
     print("  │          MEETING MINUTES — RUNNING          │")
     print("  ├─────────────────────────────────────────────┤")
-    print(f"  │  LOCAL   https://localhost:{port:<18}│")
-    print(f"  │  PHONE   https://{lan_ip}:{port:<15}│")
-    print("  │                                             │")
-    print("  │  On your phone: open the PHONE address,     │")
-    print("  │  tap Advanced → Proceed (cert warning is    │")
-    print("  │  normal for a local self-signed cert).      │")
+    print(f"  │  LOCAL   {proto}://localhost:{port:<18}│")
+    print(f"  │  PHONE   {proto}://{lan_ip}:{port:<15}│")
+    if ssl_files:
+        print("  │                                             │")
+        print("  │  Phone: tap Advanced → Proceed on the       │")
+        print("  │  cert warning (self-signed, normal).        │")
     print("  │                                             │")
     print("  │  Press Ctrl+C to stop.                      │")
     print("  └─────────────────────────────────────────────┘")
     print()
-    app.run(host="0.0.0.0", port=port, debug=False, ssl_context="adhoc")
+
+    app.run(host="0.0.0.0", port=port, debug=False,
+            ssl_context=ssl_files if ssl_files else None)
