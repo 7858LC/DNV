@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Meeting Minutes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0A0F1E;
+  --surface: #111827;
+  --s2:      #1A2234;
+  --border:  #1E2D45;
+  --text:    #E8ECF0;
+  --muted:   #6B7280;
+  --red:     #EF4444;
+  --amber:   #F59E0B;
+  --green:   #22C55E;
+  --violet:  #A78BFA;
+  --fh: 'Barlow Condensed', sans-serif;
+  --fm: 'IBM Plex Mono', monospace;
+}
+
+html { height: 100%; }
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fm);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── TOP BAR ── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.brand {
+  font-family: var(--fh);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--violet);
+}
+
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 49px;
+  z-index: 40;
+}
+.tab {
+  flex: 1;
+  font-family: var(--fh);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 0;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab.active { color: var(--violet); border-bottom-color: var(--violet); }
+
+/* ── PAGES ── */
+.page { display: none; padding: 16px; }
+.page.active { display: block; }
+
+/* ── FORM ELEMENTS ── */
+.section {
+  margin-bottom: 16px;
+}
+.label {
+  font-family: var(--fh);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: block;
+}
+input[type="text"], textarea, select {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--fm);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  border-radius: 0;
+  -webkit-appearance: none;
+  transition: border-color 0.15s;
+}
+input[type="text"]:focus,
+textarea:focus { border-color: var(--violet); }
+input[type="text"]::placeholder,
+textarea::placeholder { color: var(--muted); }
+textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+/* ── ATTENDEE ROWS ── */
+.attendee-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.attendee-row input { flex: 1; }
+.rm-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  padding: 8px 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.rm-btn:active { color: var(--red); }
+.add-row-btn {
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-family: var(--fh);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  padding: 8px;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.add-row-btn:active { border-color: var(--violet); color: var(--violet); }
+
+/* ── REC BUTTON ── */
+.rec-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 16px;
+}
+#rec-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--red);
+  background: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+#rec-btn:active, #rec-btn.recording {
+  background: var(--red);
+}
+.rec-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--red);
+  transition: background 0.15s;
+}
+#rec-btn.recording .rec-dot {
+  background: var(--bg);
+  animation: blink 1s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.rec-word {
+  font-family: var(--fh);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--red);
+  transition: color 0.15s;
+}
+#rec-btn.recording .rec-word { color: var(--bg); }
+
+.rec-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+#rec-timer {
+  font-family: var(--fm);
+  font-size: 22px;
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
+  display: none;
+  min-width: 52px;
+  text-align: center;
+}
+#rec-status {
+  font-family: var(--fh);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* Interim preview */
+#interim {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+  min-height: 20px;
+  padding: 4px 0;
+  text-align: center;
+  display: none;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  font-family: var(--fh);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 14px;
+  border: 1px solid;
+  background: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.btn-violet { border-color: var(--violet); color: var(--violet); }
+.btn-violet:active { background: var(--violet); color: var(--bg); }
+.btn-green  { border-color: var(--green);  color: var(--green);  }
+.btn-green:active  { background: var(--green);  color: var(--bg); }
+.btn-muted  { border-color: var(--muted);  color: var(--muted);  }
+.btn-muted:active  { background: var(--muted);  color: var(--bg); }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+.btn + .btn { margin-top: 10px; }
+
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── ERROR ── */
+#error-msg {
+  display: none;
+  background: color-mix(in srgb, var(--red) 12%, var(--surface));
+  border: 1px solid var(--red);
+  border-left: 3px solid var(--red);
+  color: var(--red);
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+/* ── OUTPUT ── */
+#output-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+#output-empty .icon { font-size: 36px; opacity: 0.25; margin-bottom: 10px; }
+#output-empty .msg {
+  font-family: var(--fh);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+#output-content { display: none; }
+
+.out-date {
+  font-family: var(--fh);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.out-attendee {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.out-att-bullet { color: var(--violet); margin-right: 6px; }
+.out-title {
+  font-family: var(--fh);
+  font-size: 17px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-left: 3px solid var(--violet);
+  padding-left: 10px;
+  margin: 10px 0 16px;
+}
+
+.sec-label {
+  font-family: var(--fh);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+.bullets { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+.bullet-row { display: flex; gap: 8px; font-size: 14px; line-height: 1.5; }
+.bullet-row.nested { padding-left: 18px; }
+.bull { color: var(--violet); flex-shrink: 0; }
+.bull.sub { color: var(--muted); }
+
+.actions-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  padding: 14px;
+  margin-bottom: 20px;
+}
+.actions-title {
+  font-family: var(--fh);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.act-count {
+  background: var(--amber);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.action-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.action-item:last-child { border-bottom: none; padding-bottom: 0; }
+.action-task { margin-bottom: 3px; }
+.action-meta { display: flex; gap: 12px; font-size: 11px; }
+.owner { color: var(--green); font-family: var(--fh); letter-spacing: 0.06em; }
+.owner.tbd { color: var(--muted); }
+.due { color: var(--amber); }
+
+.export-row { display: flex; gap: 10px; margin-top: 4px; }
+.export-row .btn { flex: 1; font-size: 13px; padding: 10px; }
+
+/* ── NO ASR ── */
+#no-asr {
+  display: none;
+  font-size: 12px;
+  color: var(--amber);
+  text-align: center;
+  padding: 6px 0 2px;
+}
+
+/* Scrollbar (desktop) */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">Meeting Minutes</span>
+  <span id="header-status" style="font-family:var(--fh);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase"></span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('input')">Input</div>
+  <div class="tab" onclick="switchTab('output')">Output</div>
+</div>
+
+<!-- ══════════════════ INPUT PAGE ══════════════════ -->
+<div class="page active" id="page-input">
+
+  <div id="error-msg"></div>
+
+  <!-- Meeting info -->
+  <div class="section">
+    <span class="label">Date</span>
+    <input type="text" id="meeting-date" value="{{ today }}" placeholder="5/11/26">
+  </div>
+  <div class="section">
+    <span class="label">Meeting Title</span>
+    <input type="text" id="meeting-title" placeholder="Structural PDR Kickoff">
+  </div>
+
+  <!-- Attendees -->
+  <div class="section">
+    <span class="label">Attendees</span>
+    <div id="attendee-rows">
+      <div class="attendee-row">
+        <input type="text" placeholder="Joe, Joseph, Larry, Oli, Alfie">
+        <button class="rm-btn" onclick="removeRow(this)">×</button>
+      </div>
+      <div class="attendee-row">
+        <input type="text" placeholder="Chris, Sebastian, Jonathan">
+        <button class="rm-btn" onclick="removeRow(this)">×</button>
+      </div>
+    </div>
+    <button class="add-row-btn" onclick="addRow()">+ Add group</button>
+  </div>
+
+  <!-- Live transcription -->
+  <div class="section">
+    <span class="label">Live Transcription</span>
+    <div id="no-asr">⚠ Live mic requires Chrome or Safari</div>
+    <div class="rec-wrap">
+      <button id="rec-btn" onclick="toggleRec()">
+        <span class="rec-dot"></span>
+        <span class="rec-word" id="rec-word">REC</span>
+      </button>
+      <div class="rec-meta">
+        <span id="rec-timer">0:00</span>
+        <span id="rec-status">Tap to record</span>
+      </div>
+      <div id="interim"></div>
+    </div>
+  </div>
+
+  <!-- Transcript -->
+  <div class="section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span class="label" style="margin:0">Transcript</span>
+      <button onclick="clearTA()" style="background:none;border:none;color:var(--muted);font-family:var(--fh);font-size:11px;letter-spacing:.08em;cursor:pointer;padding:0">Clear</button>
+    </div>
+    <textarea id="transcript" rows="6" placeholder="Transcript will appear here as you speak, or paste raw notes directly."></textarea>
+  </div>
+
+  <!-- Generate -->
+  <button class="btn btn-violet" id="gen-btn" onclick="generate()">
+    <span class="spinner" id="spinner"></span>
+    <span id="gen-label">Generate Minutes</span>
+  </button>
+
+</div><!-- /page-input -->
+
+<!-- ══════════════════ OUTPUT PAGE ══════════════════ -->
+<div class="page" id="page-output">
+
+  <div id="output-empty">
+    <div class="icon">◈</div>
+    <div class="msg">Generate minutes first</div>
+  </div>
+
+  <div id="output-content">
+    <div id="out-date" class="out-date"></div>
+    <div id="out-attendees"></div>
+    <div id="out-title" class="out-title"></div>
+
+    <div class="sec-label">Notes</div>
+    <div class="bullets" id="out-bullets"></div>
+
+    <div class="actions-box" id="out-actions" style="display:none">
+      <div class="actions-title">
+        Action Items <span class="act-count" id="act-count">0</span>
+      </div>
+      <div id="out-actions-list"></div>
+    </div>
+
+    <div class="export-row">
+      <button class="btn btn-muted" onclick="copyOutput()">Copy</button>
+      <button class="btn btn-green" onclick="exportMd()">Export .md</button>
+    </div>
+  </div>
+
+</div><!-- /page-output -->
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+let _result     = null;
+let _recActive  = false;
+let _recognition = null;
+let _timerInt   = null;
+let _elapsed    = 0;
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const pages = ['input', 'output'];
+    t.classList.toggle('active', pages[i] === name);
+  });
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.toggle('active', p.id === 'page-' + name);
+  });
+}
+
+// ── ATTENDEES ─────────────────────────────────────────────────────────────────
+function addRow() {
+  const wrap = document.getElementById('attendee-rows');
+  const row = document.createElement('div');
+  row.className = 'attendee-row';
+  row.innerHTML = '<input type="text" placeholder="Names, comma separated"><button class="rm-btn" onclick="removeRow(this)">×</button>';
+  wrap.appendChild(row);
+}
+function removeRow(btn) {
+  const wrap = document.getElementById('attendee-rows');
+  if (wrap.children.length <= 1) return;
+  btn.closest('.attendee-row').remove();
+}
+function getGroups() {
+  return Array.from(document.querySelectorAll('#attendee-rows input'))
+    .map(el => el.value.trim()).filter(Boolean);
+}
+
+// ── SPEECH RECOGNITION ────────────────────────────────────────────────────────
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) {
+  document.getElementById('no-asr').style.display = 'block';
+  document.getElementById('rec-btn').disabled = true;
+} else {
+  setupRecognition();
+}
+
+function setupRecognition() {
+  _recognition = new SR();
+  _recognition.continuous     = true;
+  _recognition.interimResults = true;
+  _recognition.lang           = 'en-US';
+
+  _recognition.onresult = (event) => {
+    const ta = document.getElementById('transcript');
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        const words = event.results[i][0].transcript.trim();
+        if (words) {
+          const cur = ta.value;
+          const sep = cur && !/\s$/.test(cur) ? ' ' : '';
+          ta.value = cur + sep + words;
+          ta.scrollTop = ta.scrollHeight;
+        }
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    const el = document.getElementById('interim');
+    el.textContent = interim;
+    el.style.display = interim ? 'block' : 'none';
+  };
+
+  _recognition.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    showError('Mic error: ' + e.error);
+    stopRec();
+  };
+
+  _recognition.onend = () => {
+    if (_recActive) {
+      try { _recognition.start(); } catch(_) {}
+    }
+  };
+}
+
+function toggleRec() {
+  if (_recActive) stopRec(); else startRec();
+}
+
+function startRec() {
+  if (!_recognition) return;
+  try { _recognition.start(); } catch(_) { return; }
+  _recActive = true;
+  _elapsed = 0;
+  document.getElementById('rec-btn').classList.add('recording');
+  document.getElementById('rec-word').textContent = 'STOP';
+  document.getElementById('rec-status').textContent = 'Recording…';
+  document.getElementById('rec-timer').style.display = 'inline';
+  document.getElementById('interim').style.display = 'block';
+  _timerInt = setInterval(() => {
+    _elapsed++;
+    const m = Math.floor(_elapsed / 60);
+    const s = String(_elapsed % 60).padStart(2, '0');
+    document.getElementById('rec-timer').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function stopRec() {
+  _recActive = false;
+  clearInterval(_timerInt);
+  try { _recognition.stop(); } catch(_) {}
+  document.getElementById('rec-btn').classList.remove('recording');
+  document.getElementById('rec-word').textContent = 'REC';
+  document.getElementById('rec-status').textContent = 'Tap to record';
+  const interim = document.getElementById('interim');
+  interim.textContent = '';
+  interim.style.display = 'none';
+}
+
+function clearTA() {
+  document.getElementById('transcript').value = '';
+  const interim = document.getElementById('interim');
+  interim.textContent = '';
+  interim.style.display = 'none';
+}
+
+// ── GENERATE ─────────────────────────────────────────────────────────────────
+async function generate() {
+  if (_recActive) stopRec();
+  const transcript = document.getElementById('transcript').value.trim();
+  if (!transcript) { showError('No transcript to process.'); return; }
+  hideError();
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('spinner').style.display = 'inline-block';
+  document.getElementById('gen-label').textContent = 'Processing…';
+  document.getElementById('header-status').textContent = 'Working…';
+
+  const payload = {
+    transcript,
+    date:            document.getElementById('meeting-date').value.trim(),
+    title:           document.getElementById('meeting-title').value.trim(),
+    attendee_groups: getGroups(),
+  };
+
+  try {
+    const resp = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) { showError(data.error || 'Failed.'); return; }
+    _result = { ...payload, ...data };
+    renderOutput(payload, data);
+    switchTab('output');
+    document.getElementById('header-status').textContent = 'Ready';
+  } catch (e) {
+    showError('Network error: ' + e.message);
+    document.getElementById('header-status').textContent = '';
+  } finally {
+    btn.disabled = false;
+    document.getElementById('spinner').style.display = 'none';
+    document.getElementById('gen-label').textContent = 'Generate Minutes';
+  }
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function renderOutput(meta, data) {
+  document.getElementById('output-empty').style.display   = 'none';
+  document.getElementById('output-content').style.display = 'block';
+
+  const dateEl = document.getElementById('out-date');
+  dateEl.textContent = meta.date || '';
+
+  const attEl = document.getElementById('out-attendees');
+  attEl.innerHTML = '';
+  (meta.attendee_groups || []).forEach(g => {
+    const d = document.createElement('div');
+    d.className = 'out-attendee';
+    d.innerHTML = `<span class="out-att-bullet">•</span>${esc(g)}`;
+    attEl.appendChild(d);
+  });
+
+  const titleEl = document.getElementById('out-title');
+  titleEl.textContent = meta.title || '';
+  titleEl.style.display = meta.title ? 'block' : 'none';
+
+  const bulletsEl = document.getElementById('out-bullets');
+  bulletsEl.innerHTML = '';
+  (data.minutes || '').split('\n').forEach(line => {
+    if (!line.trim()) return;
+    const nested = line.startsWith('\t') || line.startsWith('  ');
+    const text   = line.replace(/^[\t\s]*[•\-]\s*/, '').trim();
+    if (!text) return;
+    const row = document.createElement('div');
+    row.className = 'bullet-row' + (nested ? ' nested' : '');
+    row.innerHTML = `<span class="bull${nested ? ' sub' : ''}">${nested ? '◦' : '•'}</span><span>${esc(text)}</span>`;
+    bulletsEl.appendChild(row);
+  });
+
+  const actions  = data.action_items || [];
+  const actBox   = document.getElementById('out-actions');
+  const actList  = document.getElementById('out-actions-list');
+  actList.innerHTML = '';
+  if (actions.length) {
+    actBox.style.display = 'block';
+    document.getElementById('act-count').textContent = actions.length;
+    actions.forEach(item => {
+      const tbd = !item.owner || item.owner === 'TBD';
+      const d = document.createElement('div');
+      d.className = 'action-item';
+      d.innerHTML = `
+        <div class="action-task">${esc(item.task || '')}</div>
+        <div class="action-meta">
+          <span class="owner${tbd ? ' tbd' : ''}">${esc(item.owner || 'TBD')}</span>
+          ${item.due ? `<span class="due">${esc(item.due)}</span>` : ''}
+        </div>`;
+      actList.appendChild(d);
+    });
+  } else {
+    actBox.style.display = 'none';
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── COPY ─────────────────────────────────────────────────────────────────────
+function copyOutput() {
+  if (!_result) return;
+  const { date, title, attendee_groups, minutes, action_items } = _result;
+  let t = '';
+  if (date) t += date + '\n';
+  (attendee_groups || []).forEach(g => { t += `• ${g}\n`; });
+  if (title) t += `• ${title}\n`;
+  t += '\n' + (minutes || '');
+  if (action_items?.length) {
+    t += '\n\nAction Items:\n';
+    action_items.forEach(i => {
+      t += `• ${i.task}  [${i.owner||'TBD'}]${i.due ? '  — '+i.due : ''}\n`;
+    });
+  }
+  navigator.clipboard.writeText(t).then(() => {
+    const btn = document.querySelector('.export-row .btn-muted');
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+
+// ── EXPORT ───────────────────────────────────────────────────────────────────
+async function exportMd() {
+  if (!_result) return;
+  const resp = await fetch('/api/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(_result),
+  });
+  if (!resp.ok) { showError('Export failed.'); return; }
+  const blob = await resp.blob();
+  const cd   = resp.headers.get('Content-Disposition') || '';
+  const m    = cd.match(/filename="([^"]+)"/);
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = m ? m[1] : 'minutes.md'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── ERROR ─────────────────────────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+</script>
+</body>
+</html>
