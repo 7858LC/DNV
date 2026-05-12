@@ -110,7 +110,9 @@ def make_ssl_files(lan_ip: str) -> tuple[str, str] | None:
         ))
         return str(cert_path), str(key_path)
     except Exception as e:
-        print(f"  [!] Could not create HTTPS cert ({e})")
+        import traceback
+        print(f"  [!] Could not create HTTPS cert: {e}")
+        traceback.print_exc()
         return None
 
 
