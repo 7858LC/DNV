@@ -207,6 +207,11 @@ def export():
 
 
 if __name__ == "__main__":
+    # Keep Windows awake while app is running (no admin needed)
+    if os.name == "nt":
+        import ctypes
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000001)  # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+
     port   = find_free_port()
     lan_ip = get_lan_ip()
     ssl_files = make_ssl_files(lan_ip)

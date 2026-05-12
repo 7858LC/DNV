@@ -1,15 +1,23 @@
 @echo off
-:: ── Meeting Minutes — background auto-start ──────────────────────────────────
-:: Place a shortcut to this file in your Windows Startup folder so it runs at login.
-:: To open the Startup folder: press Win+R, type shell:startup, press Enter.
-::
-:: The app runs minimized in the background. To stop it, close the
-:: "Meeting Minutes Server" window from the taskbar.
+:: ── Meeting Minutes — auto-start ─────────────────────────────────────────────
+:: Runs at login via Windows Startup folder shortcut.
+:: Logs to autostart.log in the same folder so you can verify it ran.
 
 cd /d "%~dp0"
 
+echo %DATE% %TIME% - Starting Meeting Minutes >> "%~dp0autostart.log"
+
+:: ── Load API key from .apikey file ────────────────────────────────────────────
 if not defined ANTHROPIC_API_KEY (
-    for /f "usebackq delims=" %%K in ("%~dp0.apikey") do set ANTHROPIC_API_KEY=%%K
+    if exist "%~dp0.apikey" (
+        for /f "usebackq delims=" %%K in ("%~dp0.apikey") do set ANTHROPIC_API_KEY=%%K
+    ) else (
+        echo %DATE% %TIME% - ERROR: .apikey file not found >> "%~dp0autostart.log"
+        exit /b 1
+    )
 )
 
-start /min "Meeting Minutes Server" python app.py
+:: ── Start app minimized ───────────────────────────────────────────────────────
+start /min "Meeting Minutes" python "%~dp0app.py"
+
+echo %DATE% %TIME% - App launched on port 5200 >> "%~dp0autostart.log"
