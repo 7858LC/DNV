@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Letter Unscrambler</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 6px; color: #38bdf8; }
+  p.sub { color: #94a3b8; margin-bottom: 28px; font-size: 0.9rem; }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 680px;
+  }
+  .field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 1.15rem;
+    letter-spacing: 0.08em;
+    border-radius: 8px;
+    border: 2px solid #334155;
+    background: #0f172a;
+    color: #f1f5f9;
+    outline: none;
+    transition: border-color 0.2s;
+    text-transform: uppercase;
+  }
+  input[type="text"]:focus { border-color: #38bdf8; }
+  input[type="text"].sm {
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    padding: 8px 12px;
+    text-transform: lowercase;
+  }
+  .char-count {
+    text-align: right;
+    font-size: 0.75rem;
+    color: #475569;
+    margin-top: 4px;
+  }
+  .char-count.warn { color: #f59e0b; }
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-group.full { grid-column: 1 / -1; }
+  .row { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; }
+  .row .filter-group { flex: 1; }
+  select {
+    width: 100%;
+    padding: 8px 12px;
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 2px solid #334155;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: #38bdf8; }
+  .toggle-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #1e3a5f;
+  }
+  label.toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    cursor: pointer;
+    user-select: none;
+  }
+  input[type="checkbox"] { accent-color: #38bdf8; width: 15px; height: 15px; cursor: pointer; }
+  button#runBtn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 12px;
+    background: #0284c7;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button#runBtn:hover { background: #0369a1; }
+  button#runBtn:disabled { background: #1e3a5f; color: #475569; cursor: default; }
+  #status {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: #64748b;
+    min-height: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border: 2px solid #334155;
+    border-top-color: #38bdf8;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #results { margin-top: 24px; }
+  .group-header {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    margin: 18px 0 8px;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .count-badge {
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 999px;
+    padding: 1px 9px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-weight: 400;
+  }
+  .words { display: flex; flex-wrap: wrap; gap: 7px; }
+  .word {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 4px 11px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .word:hover { border-color: #38bdf8; color: #38bdf8; }
+  .word.copied { color: #4ade80 !important; border-color: #4ade80 !important; }
+  .none { color: #64748b; font-size: 0.9rem; margin-top: 16px; }
+  .summary-bar {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .summary-bar span { color: #e2e8f0; font-weight: 600; }
+  .dict-badge {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    color: #475569;
+  }
+  .dict-badge span { color: #38bdf8; }
+  .top7 {
+    margin-top: 20px;
+    background: #0f172a;
+    border: 1px solid #1d4ed8;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .top7-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #60a5fa;
+    margin-bottom: 10px;
+  }
+  .top7-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .top7-word {
+    background: #1e3a5f;
+    border: 1px solid #1d4ed8;
+    border-radius: 6px;
+    padding: 5px 13px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    color: #bfdbfe;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .top7-word:hover { background: #1d4ed8; color: #fff; }
+  .top7-word.copied { background: #14532d; border-color: #16a34a; color: #4ade80; }
+  .top7-rank {
+    font-size: 0.65rem;
+    color: #60a5fa;
+    font-weight: 400;
+    opacity: 0.7;
+  }
+  .top7-word.active { background: #1d4ed8; color: #fff; border-color: #3b82f6; }
+  .def-panel {
+    margin-top: 12px;
+    background: #172035;
+    border: 1px solid #1d4ed8;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .def-word {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #bfdbfe;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+  .def-pos {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-style: italic;
+    color: #94a3b8;
+    background: #1e293b;
+    border-radius: 4px;
+    padding: 1px 7px;
+    margin-right: 6px;
+    margin-bottom: 4px;
+  }
+  .def-meaning { color: #e2e8f0; margin-bottom: 6px; }
+  .def-example { color: #64748b; font-style: italic; margin-top: 2px; }
+  .def-phonetic { color: #475569; font-size: 0.8rem; margin-bottom: 8px; }
+  .def-error { color: #f87171; }
+  .def-loading { color: #475569; }
+  .def-section { margin-bottom: 12px; }
+  .def-section:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<h1>Letter Unscrambler</h1>
+<p class="sub">Find every valid English word hidden in your letters</p>
+<div class="card">
+
+  <div class="field-label">Letters (max 20)</div>
+  <input type="text" id="letters" placeholder="E.g. AELRST" maxlength="20" autocomplete="off" spellcheck="false">
+  <div class="char-count" id="charCount">0 / 20</div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <div class="field-label">Starts with</div>
+      <input type="text" class="sm" id="startsWith" placeholder="e.g. st" maxlength="10" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="filter-group">
+      <div class="field-label">Ends with</div>
+      <input type="text" class="sm" id="endsWith" placeholder="e.g. ing" maxlength="10" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="filter-group">
+      <div class="field-label">Contains</div>
+      <input type="text" class="sm" id="contains" placeholder="e.g. ea" maxlength="10" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="filter-group">
+      <div class="field-label">Word length</div>
+      <select id="lengthFilter">
+        <option value="any">Any length</option>
+        <option value="exact-all">Exact — use all letters</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="toggle-row">
+    <label class="toggle">
+      <input type="checkbox" id="sortAlpha"> Sort alphabetically (default: by length)
+    </label>
+    <label class="toggle">
+      <input type="checkbox" id="groupByLen" checked> Group by length
+    </label>
+  </div>
+
+  <button id="runBtn" onclick="run()">Unscramble</button>
+
+  <div id="status"><div class="spinner" id="spinner"></div><span id="statusText"></span></div>
+  <div class="dict-badge" id="dictBadge"></div>
+  <div id="results"></div>
+</div>
+
+<script>
+let WORDSET = null;
+let dictSize = 0;
+let loadPromise = null;
+
+function setStatus(msg) { document.getElementById("statusText").textContent = msg; }
+function showSpinner(on) { document.getElementById("spinner").style.display = on ? "block" : "none"; }
+
+async function loadWords() {
+  if (WORDSET) return;
+  if (loadPromise) return loadPromise;
+  loadPromise = (async () => {
+    showSpinner(true);
+    setStatus("Loading dictionary…");
+    try {
+      const r = await fetch("https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt");
+      if (!r.ok) throw new Error("fetch failed");
+      const text = await r.text();
+      WORDSET = new Set(text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(w => w.length >= 2));
+      dictSize = WORDSET.size;
+      document.getElementById("dictBadge").innerHTML = `Dictionary: <span>${dictSize.toLocaleString()} words</span> (words_alpha)`;
+      setStatus("");
+    } catch (e) {
+      // tiny fallback — users see a clear message
+      WORDSET = new Set();
+      dictSize = 0;
+      document.getElementById("dictBadge").innerHTML = `<span style="color:#f87171">Could not load dictionary. Check your connection and try again.</span>`;
+      setStatus("Dictionary unavailable.");
+    }
+    showSpinner(false);
+  })();
+  return loadPromise;
+}
+
+// Populate length select dynamically once letters are typed
+function updateLengthOptions() {
+  const n = document.getElementById("letters").value.replace(/\s/g,"").length;
+  const sel = document.getElementById("lengthFilter");
+  const cur = sel.value;
+  // Remove numeric options
+  [...sel.options].forEach(o => { if (/^\d+$/.test(o.value)) o.remove(); });
+  for (let i = 2; i <= Math.max(n, 2); i++) {
+    const o = new Option(`Exactly ${i} letter${i>1?"s":""}`, String(i));
+    sel.appendChild(o);
+  }
+  // Restore selection if still valid
+  if ([...sel.options].find(o => o.value === cur)) sel.value = cur;
+}
+
+document.getElementById("letters").addEventListener("input", function() {
+  const v = this.value.replace(/[^a-zA-Z]/g, "").slice(0, 20);
+  this.value = v.toUpperCase();
+  const cc = document.getElementById("charCount");
+  cc.textContent = `${v.length} / 20`;
+  cc.className = "char-count" + (v.length >= 18 ? " warn" : "");
+  updateLengthOptions();
+});
+
+function canForm(word, letterPool) {
+  const pool = [...letterPool];
+  for (const ch of word) {
+    const i = pool.indexOf(ch);
+    if (i === -1) return false;
+    pool.splice(i, 1);
+  }
+  return true;
+}
+
+async function run() {
+  const raw = document.getElementById("letters").value.replace(/\s/g,"").toLowerCase();
+  if (!raw) { setStatus("Enter some letters first."); return; }
+
+  const btn = document.getElementById("runBtn");
+  btn.disabled = true;
+  document.getElementById("results").innerHTML = "";
+
+  await loadWords();
+
+  if (!WORDSET || WORDSET.size === 0) { btn.disabled = false; return; }
+
+  const letters = [...raw];
+  const startsWith = document.getElementById("startsWith").value.trim().toLowerCase();
+  const endsWith   = document.getElementById("endsWith").value.trim().toLowerCase();
+  const contains   = document.getElementById("contains").value.trim().toLowerCase();
+  const lenFilter  = document.getElementById("lengthFilter").value;
+  const sortAlpha  = document.getElementById("sortAlpha").checked;
+  const groupByLen = document.getElementById("groupByLen").checked;
+
+  showSpinner(true);
+  setStatus("Searching…");
+
+  // Yield to browser so spinner renders
+  await new Promise(r => setTimeout(r, 0));
+
+  const found = [];
+  for (const word of WORDSET) {
+    const wlen = word.length;
+    if (wlen > letters.length) continue;
+    if (wlen < 2) continue;
+
+    // Length filter
+    if (lenFilter === "exact-all" && wlen !== letters.length) continue;
+    if (/^\d+$/.test(lenFilter) && wlen !== parseInt(lenFilter)) continue;
+
+    // Pattern filters
+    if (startsWith && !word.startsWith(startsWith)) continue;
+    if (endsWith   && !word.endsWith(endsWith))     continue;
+    if (contains   && !word.includes(contains))     continue;
+
+    if (canForm(word, letters)) found.push(word);
+  }
+
+  showSpinner(false);
+
+  if (found.length === 0) {
+    setStatus("");
+    document.getElementById("results").innerHTML = `<p class="none">No words found. Try relaxing your filters.</p>`;
+    btn.disabled = false;
+    return;
+  }
+
+  if (sortAlpha) {
+    found.sort((a, b) => a.localeCompare(b));
+  } else {
+    found.sort((a, b) => b.length - a.length || a.localeCompare(b));
+  }
+
+  const out = document.getElementById("results");
+  out.innerHTML = "";
+
+  // Top 7 (longest words, then alphabetical tiebreak)
+  const top7 = [...found].sort((a,b) => b.length - a.length || a.localeCompare(b)).slice(0, 7);
+  const t7 = document.createElement("div");
+  t7.className = "top7";
+  const t7label = document.createElement("div");
+  t7label.className = "top7-label";
+  t7label.textContent = "Top 7 Words";
+  t7.appendChild(t7label);
+  const t7row = document.createElement("div");
+  t7row.className = "top7-words";
+  const defPanel = document.createElement("div");
+  let activeChip = null;
+  const defCache = {};
+
+  top7.forEach((w, i) => {
+    const chip = document.createElement("span");
+    chip.className = "top7-word";
+    chip.innerHTML = `<span class="top7-rank">#${i+1}</span>${w.toUpperCase()}`;
+    chip.title = "Click for definition";
+    chip.onclick = async () => {
+      if (activeChip === chip) {
+        // toggle off
+        chip.classList.remove("active");
+        defPanel.innerHTML = "";
+        defPanel.style.display = "none";
+        activeChip = null;
+        return;
+      }
+      if (activeChip) activeChip.classList.remove("active");
+      activeChip = chip;
+      chip.classList.add("active");
+      defPanel.style.display = "block";
+      defPanel.innerHTML = `<div class="def-loading">Looking up <strong>${w.toUpperCase()}</strong>…</div>`;
+
+      if (!defCache[w]) {
+        try {
+          const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
+          defCache[w] = res.ok ? await res.json() : null;
+        } catch { defCache[w] = null; }
+      }
+
+      // Chip may have been toggled off while fetching
+      if (activeChip !== chip) return;
+
+      const data = defCache[w];
+      if (!data) {
+        defPanel.innerHTML = `<div class="def-word">${w.toUpperCase()}</div><div class="def-error">No definition found.</div>`;
+        return;
+      }
+
+      const entry = data[0];
+      const phonetic = entry.phonetics?.find(p => p.text)?.text || "";
+      let html = `<div class="def-word">${w.toUpperCase()}`;
+      if (phonetic) html += ` <span class="def-phonetic">${phonetic}</span>`;
+      html += `</div>`;
+
+      for (const meaning of entry.meanings.slice(0, 3)) {
+        html += `<div class="def-section"><span class="def-pos">${meaning.partOfSpeech}</span>`;
+        for (const def of meaning.definitions.slice(0, 2)) {
+          html += `<div class="def-meaning">• ${def.definition}</div>`;
+          if (def.example) html += `<div class="def-example">"${def.example}"</div>`;
+        }
+        html += `</div>`;
+      }
+
+      defPanel.innerHTML = html;
+    };
+    t7row.appendChild(chip);
+  });
+
+  defPanel.className = "def-panel";
+  defPanel.style.display = "none";
+  t7.appendChild(t7row);
+  t7.appendChild(defPanel);
+  out.appendChild(t7);
+
+  // Summary bar
+  const maxLen = Math.max(...found.map(w => w.length));
+  const minLen = Math.min(...found.map(w => w.length));
+  const summary = document.createElement("div");
+  summary.className = "summary-bar";
+  summary.innerHTML = `Found <span>${found.length.toLocaleString()}</span> words &nbsp;|&nbsp; Lengths <span>${minLen}–${maxLen}</span> &nbsp;|&nbsp; Longest: <span>${found.filter(w=>w.length===maxLen).slice(0,3).join(", ").toUpperCase()}</span>`;
+  out.appendChild(summary);
+
+  setStatus(`${found.length.toLocaleString()} word${found.length !== 1 ? "s" : ""} found`);
+
+  if (groupByLen && !sortAlpha) {
+    const byLen = {};
+    for (const w of found) (byLen[w.length] = byLen[w.length] || []).push(w);
+    const lengths = Object.keys(byLen).map(Number).sort((a,b) => b - a);
+    for (const len of lengths) {
+      appendGroup(out, `${len}-letter words`, byLen[len]);
+    }
+  } else {
+    appendGroup(out, "Results", found);
+  }
+
+  btn.disabled = false;
+}
+
+function appendGroup(container, label, words) {
+  const wrap = document.createElement("div");
+  const hdr = document.createElement("div");
+  hdr.className = "group-header";
+  hdr.innerHTML = `${label} <span class="count-badge">${words.length}</span>`;
+  wrap.appendChild(hdr);
+  const row = document.createElement("div");
+  row.className = "words";
+  for (const w of words) {
+    const chip = document.createElement("span");
+    chip.className = "word";
+    chip.textContent = w.toUpperCase();
+    chip.title = "Click to copy";
+    chip.onclick = () => {
+      navigator.clipboard.writeText(w).catch(() => {});
+      chip.classList.add("copied");
+      setTimeout(() => chip.classList.remove("copied"), 900);
+    };
+    row.appendChild(chip);
+  }
+  wrap.appendChild(row);
+  container.appendChild(wrap);
+}
+
+document.addEventListener("keydown", e => { if (e.key === "Enter" && document.activeElement !== document.getElementById("runBtn")) run(); });
+
+// Pre-load on idle
+if ("requestIdleCallback" in window) requestIdleCallback(loadWords);
+else setTimeout(loadWords, 300);
+</script>
+</body>
+</html>
